@@ -6,7 +6,7 @@ const cors = require('cors');
 const morgan = require("morgan");
 
 //Configuraciones
-app.set('port', process.env.PORT || 4000);
+app.set('port', 3000);
 
 //middlewares
 app.use(cors());
