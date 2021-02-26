@@ -13,29 +13,33 @@ controlador.todosUsuarios =
 
 controlador.ingresarUsuario =
     async (req, res) => {
-        var { nombre, apellido, edad, email, password, perfil } = req.body; //copiamos los datos recibidos en constantes
+        var { rut, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, perfilSec, cargo, bancarios } = req.body; //copiamos los datos recibidos en constantes
+        var dv = 1;
         const passencripted = bcrypt.hashSync(password, 10);
         password = passencripted;
-        const nuevoUsuario = new usuario({ nombre, apellido, edad, email, password, perfil }); // creamos un objeto usuario con los datos recibidos
+        const nuevoUsuario = new usuario({ rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, perfilSec, cargo, bancarios }); // creamos un objeto usuario con los datos recibidos
         await nuevoUsuario.save(); // indicamos  mongoose que guarde el nuevo registro
         res.json({ estado: "recibido" });
     }
 
 controlador.obtenerUsuario =
     async (req, res) => {
+        console.log("llego");
+        console.log(req.params.id);
         const usuarioRes = await usuario.findOne({ _id: req.params.id });
         res.json(usuarioRes);
     }
 
 controlador.actualizaUsuario =
     async (req, res) => {
-        console.log("notsad");
-        //recibe por protocolo el id del usuario
-        // const { nombre, apellido, edad } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
-        // const nuevoUsuario = { nombre, apellido, edad }; //creamos un array usuario con los datos nuevos
-        // await usuario.findOneAndUpdate({ __id: req.params.id }, nuevoUsuario); //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
-        // console.log(req.params.id);
-        // res.json('recibido');
+        const { id, rut, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
+        console.log(req.body);
+
+        const nuevoUsuario = { rut, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios }; //creamos un array usuario con los datos nuevos
+        console.log(nuevoUsuario);
+        await usuario.findOneAndUpdate({ _id: id }, nuevoUsuario); //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
+        console.log(req.params.id);
+        res.json('recibido');
     }
 
 controlador.actualizaUsuarioBasico =  //funcion propia del trabajador
@@ -76,8 +80,8 @@ controlador.actualizaUsuarioPassword =
 controlador.actualizaUsuarioEmergencia =
     async (req, res) => {  //recibe por protocolo el id del usuario
         console.log(req.body);
-        const { contacto, parentesco,telefono1,telefono2,direccion,comuna,ciudad } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
-        const nuevoUsuario = { emergencias:{contacto, parentesco,telefono1,telefono2,direccion,comuna,ciudad} }; //creamos un array usuario con los datos nuevos
+        const { contacto, parentesco, telefono1, telefono2, direccion, comuna, ciudad } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
+        const nuevoUsuario = { emergencias: { contacto, parentesco, telefono1, telefono2, direccion, comuna, ciudad } }; //creamos un array usuario con los datos nuevos
         await usuario.findOneAndUpdate({ _id: req.body.id }, nuevoUsuario); //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
         console.log("aqui");
         await usuario.findOne({ _id: req.body.id }, (err, usuario) => {
