@@ -69,11 +69,12 @@ controlador.actualizaUsuarioPassword =
         const password = bcrypt.hashSync(pass, 10);
         const nuevoUsuario = { password };
         await usuario.findOneAndUpdate({ _id: id }, nuevoUsuario);
+        res.json('recibido');
         // const { email, telefono } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
         // const nuevoUsuario = { email, telefono }; //creamos un array usuario con los datos nuevos
         // await usuario.findOneAndUpdate({ __id: req.params.id }, nuevoUsuario); //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
         // console.log(req.params.id);
-        res.json('recibido');
+        
     }
 controlador.actualizaUsuarioEmergencia =
     async (req, res) => {  //recibe por protocolo el id del usuario
