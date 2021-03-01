@@ -65,8 +65,6 @@ controlador.actualizaUsuarioBasico =  //funcion propia del trabajador
     }
 controlador.actualizaUsuarioPassword =
     async (req, res) => {  //recibe por protocolo el id del usuario
-        console.log("func");
-        console.log(req.body);
         const { id, pass } = req.body;
         const password = bcrypt.hashSync(pass, 10);
         const nuevoUsuario = { password };
@@ -75,7 +73,7 @@ controlador.actualizaUsuarioPassword =
         // const nuevoUsuario = { email, telefono }; //creamos un array usuario con los datos nuevos
         // await usuario.findOneAndUpdate({ __id: req.params.id }, nuevoUsuario); //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
         // console.log(req.params.id);
-        // res.json('recibido');
+        res.json('recibido');
     }
 controlador.actualizaUsuarioEmergencia =
     async (req, res) => {  //recibe por protocolo el id del usuario
