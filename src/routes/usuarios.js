@@ -24,10 +24,19 @@ router.route('/worker/basic')
     .put(controlador.actualizaUsuarioBasico)
 router.route('/worker/pass')
     .put(controlador.actualizaUsuarioPassword)
-
 router.route('/worker/emergency')
     .put(controlador.actualizaUsuarioEmergencia)
 
+router.route('/worker/ficha/equipo')
+    .post(controlador.ingresarEquipo)
+router.route('/worker/ficha/equipo/:rut')
+    .get(controlador.obtenerEquipo)
+
+router.route('/worker/ficha/contractuales')
+    .post(controlador.ingresarContractuales)
+
+router.route('/worker/ficha/contractuales/:rut')
+    .get(controlador.obtenerContractuales)
 
 
 module.exports = router;

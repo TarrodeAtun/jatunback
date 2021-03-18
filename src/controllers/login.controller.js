@@ -11,7 +11,13 @@ controlador.login =
     async (req, res) => {
         let body = req.body
         // aqui va la la comprobacion del rut
-        Usuarios.findOne({ rut: body.rut}, (err, usuario) => {
+        let rutArray =  body.rut.split("-");
+        let rut = rutArray[0];
+        while (rut.indexOf(".") != -1) {
+            rut = rut.replace(".", "");
+        }
+        let dv = rutArray[1];
+        Usuarios.findOne({ rut: rut}, (err, usuario) => {
             if (!usuario) {
                 return res.status(400).json({
                     ok: false,
