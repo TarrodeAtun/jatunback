@@ -1,0 +1,49 @@
+<html>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 600px;
+            padding: 25px;
+           
+            
+        }
+        p{
+            color:#707070;
+            font-size: 16px;
+            font-family: 'Open Sans', sans-serif;
+        }
+        a{
+            font-family: 'Open Sans', sans-serif;
+            font-size: 16px;
+            padding:10px 23px;
+            background-color: #46875F;
+            border-radius: 20px;
+            color:white;
+            text-decoration: none;
+            margin-top: 30px;
+            margin-bottom: 30px;
+            display:block;
+            width: max-content;
+        }
+    </style>
+</head>
+
+<body>
+    <img src="http://localhost:4000/assets/logo.png">
+    <p>
+        Hola, {{nombre}}:
+    </p>
+    <p>
+        Recientemente, alguien solicitó cambiar la contraseña de tu cuenta <br>
+        de Cooperativa Jatún Newén.<br> Si solicitaste el cambio, puedes crear una nueva contraseña aquí:
+    </p>
+    <a href={{enlace}} target="_blank">Restablecer Contraseña</a>
+    <p>Si no quieres cambiar tu contraseña o no solicitaste hacerlo, ignora y<br>
+        elimina este mensaje. </p>
+    <p>¡Saludos de Cooperativa Jatún Newén!</p>
+</body>
+
+</html>

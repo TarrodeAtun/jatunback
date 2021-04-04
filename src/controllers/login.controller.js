@@ -61,4 +61,62 @@ controlador.confirma =
         
     }
 
+    controlador.compruebaTokenPass =
+    async (req, res) => {
+        const body = req.body;
+        jwt.verify(body.token, process.env.SECRET, (err, decoded) => {
+            if (err) {
+                return res.status(401).json({
+                    status: 401,
+                    ok: false,
+                    mensaje: 'Token inválida'
+                });
+            } else {
+                var codigo = decoded.recuperacion;
+                console.log(codigo);
+                codigoSplit = codigo.split("&");
+                Usuarios.findOne({ rut: decoded.rut, recuperacion: codigo }).then(resp => {
+                    if (resp) {
+                        console.log(resp);
+                        console.log("encontrado");
+                        return res.status(200).json({
+                            status: 200,
+                            ok: true,
+                            mensaje: 'Código Valido, ingrese su nueva contraseña.',
+                            id: resp._id
+                        });
+                    } else {
+                        console.log("no encontrado");
+                        return res.status(401).json({
+                            status: 401,
+                            ok: false,
+                            mensaje: 'Código No Valido, solicite un nuevo código.'
+                        });
+                    }
+                }).catch(err => {
+                    console.log(err);
+                });
+
+
+                console.log("token valida");
+            }
+        });
+    }
+
+controlador.recuperaPass =
+    async (req, res) => {  //recibe por protocolo el id del usuario
+        const { id, pass } = req.body;
+        console.log(id);
+        const password = bcrypt.hashSync(pass, 10);
+        const nuevoUsuario = { password };
+        await Usuarios.findOneAndUpdate({ _id: id }, nuevoUsuario).then(resp => {
+            console.log(resp);
+            return res.status(200).json({
+                status: 200,
+                ok: true,
+                mensaje: 'Contraseña modificada correctamente'
+            });
+        });
+    }
+
 module.exports = controlador;

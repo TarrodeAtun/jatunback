@@ -16,7 +16,8 @@ const usuario = new Schema(
         password: { type: String, required: true },
         perfil: { type: String, required: true },
         cargo: { type: String, required: true },
-        perfilSec: { type: String, required: true }
+        perfilSec: { type: String, required: true },
+        recuperacion: { type: String}
     },
     { timestamps: true }
 );

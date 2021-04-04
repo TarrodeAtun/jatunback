@@ -1,0 +1,51 @@
+<html>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans&display=swap" rel="stylesheet">
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            width: 600px;
+            padding: 25px;
+           
+            
+        }
+        p{
+            color:#707070;
+            font-size: 16px;
+            font-family: 'Open Sans', sans-serif;
+        }
+        a{
+            font-family: 'Open Sans', sans-serif;
+            font-size: 16px;
+            padding:10px 23px;
+            background-color: #46875F;
+            border-radius: 20px;
+            color:white;
+            text-decoration: none;
+            margin-top: 30px;
+            margin-bottom: 30px;
+            display:block;
+            width: max-content;
+        }
+    </style>
+</head>
+
+<body>
+    <img src="http://localhost:4000/assets/logo.png">
+    <p>
+       Se ha realizado una consulta desde el formulario de soporte
+    </p>
+    <p>
+      El titular del mensaje es <br>
+      Nombre: {{nombre}} {{apellido}} <br>
+      Teléfono : {{telefono}}
+    </p>
+    <p>
+        Y su consulta es la siguiente <br>
+        {{mensaje}}
+    </p>
+    <p>¡Saludos de Cooperativa Jatún Newén!</p>
+</body>
+
+</html>
