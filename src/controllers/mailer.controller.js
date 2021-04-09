@@ -7,13 +7,17 @@ const controlador = {};
 const usuario = require('../models/usuario');
 
 var transporter = nodemailer.createTransport({
-    host:"smtp.jatunnewen.cl",
-    port:465,
-    secure:true,
+    host: "mail.jatunnewen.cl",
+    port: 465,
+    secure: true,
     auth: {
         user: 'personas@jatunnewen.cl',
-        pass: '123jatunnewen456 '
-    }
+        pass: '123jatunnewen456'
+    },
+    tls: {
+        // do not fail on invalid certs
+        rejectUnauthorized: false
+      }
 });
 
 
@@ -51,11 +55,12 @@ controlador.mailRecuperarPass =
                     recuperacion: recuperacion
                 }, process.env.SECRET, { expiresIn: '24h' })
                 usuario.findOneAndUpdate({ email: mail }, { recuperacion: recuperacion }, { upsert: true, multi: true }).then(respf => {
+                    console.log(respf);
                     readHTMLFile('./src/recursos/plantillaMail.html', function (err, html) {
                         var template = handlebars.compile(html);
-                        var link = "http://localhost:3000/recuperarPass/" + token;
+                        var link = "http://ec2-3-16-187-93.us-east-2.compute.amazonaws.com:3000/recuperarPass/" + token;
                         var replacements = {
-                            nombre: "John Doe",
+                            nombre: respf.nombre + " " + respf.apellido,
                             enlace: link
                         };
                         var htmlToSend = template(replacements);
@@ -66,12 +71,13 @@ controlador.mailRecuperarPass =
                             subject: 'Correo de recuperacion de contraseña',
                             html: htmlToSend
                         };
-                        // Enviamos el email
+                        //Enviamos el email
                         transporter.sendMail(mailOptions, function (error, info) {
                             if (error) {
                                 console.log(error);
                                 res.send(500, err.message);
                             } else {
+                                console.log(info);
                                 console.log("Email sent");
                                 res.status(200).jsonp(req.body);
                             }
@@ -103,7 +109,7 @@ controlador.mailSoporte =
             var replacements = {
                 nombre: nombre,
                 apellido: apellido,
-                telefono : telefono,
+                telefono: telefono,
                 mensaje: mensaje
             };
             var htmlToSend = template(replacements);
