@@ -2,9 +2,10 @@ const { Schema, model } = require('mongoose');
 
 const respuestaConsulta = new Schema(
     {
-        rutRespuesta:{ type: String, required: true, trim: true },
-        fechaRespuesta:{ type: Date, required: true},
-        mensaje:{ type: String, required: true },
+        refConsulta: { type: String, required: true, trim: true },
+        rutRespuesta: { type: Number, required: true, trim: true },
+        fechaRespuesta: { type: Date, required: true },
+        mensaje: { type: String, required: true },
     },
     { timestamps: true }
 );

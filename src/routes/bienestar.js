@@ -33,5 +33,7 @@ router.route('/soporte/consulta/crear')
     .post(controlador.crearConsulta)
 router.route('/soporte/consulta/responder')
     .post(controlador.responderConsulta)
+    router.route('/soporte/consulta/finalizar')
+    .post(controlador.finalizarConsulta)
 
 module.exports = router;

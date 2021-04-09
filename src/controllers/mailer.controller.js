@@ -7,10 +7,12 @@ const controlador = {};
 const usuario = require('../models/usuario');
 
 var transporter = nodemailer.createTransport({
-    service: 'Gmail',
+    host:"smtp.jatunnewen.cl",
+    port:465,
+    secure:true,
     auth: {
-        user: 'claudiobastian.vidal@gmail.com',
-        pass: 'tbhizstxcxbnuptb'
+        user: 'personas@jatunnewen.cl',
+        pass: '123jatunnewen456 '
     }
 });
 
