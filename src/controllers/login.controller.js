@@ -26,14 +26,14 @@ controlador.login =
                     }
                 })
             }
-            if (!bcrypt.compareSync(body.password, usuario.password)) {
-                return res.status(400).json({
-                    ok: false,
-                    err: {
-                        message: 'Los datos ingresados no coinciden'
-                    }
-                })
-            }
+            // if (!bcrypt.compareSync(body.password, usuario.password)) {
+            //     return res.status(400).json({
+            //         ok: false,
+            //         err: {
+            //             message: 'Los datos ingresados no coinciden'
+            //         }
+            //     })
+            // }
             var perfilSesion = "";
             if(usuario.perfil === "1"){
                 perfilSesion = null

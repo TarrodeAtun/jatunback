@@ -138,7 +138,7 @@ controlador.obtenerConsultas =
                     as: 'datosUltimaRespuesta'
                 }
             },
-            { $sort: { "fechaRespuesta": 1 } }
+            { $sort: { "fechaRespuesta": -1 } }
         ]).then(resp => {
             console.log(resp);
             res.json({ ok: true, data: resp });

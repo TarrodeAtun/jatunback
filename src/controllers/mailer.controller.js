@@ -15,10 +15,10 @@ var transporter = nodemailer.createTransport({
         pass: '123jatunnewen456'
     },
     tls: {
-        // do not fail on invalid certs
         rejectUnauthorized: false
-      }
+    }
 });
+
 
 
 //controlador de lectura de plantilla
@@ -38,6 +38,15 @@ var readHTMLFile = function (path, callback) {
 controlador.mailRecuperarPass =
     async (req, res) => {
         let mail = req.body.email;
+
+        transporter.verify(function (error, success) {
+            if (error) {
+                console.log(error);
+            } else {
+                console.log(success);
+                console.log("Server is ready to take our messages");
+            }
+        });
 
         // const usuarioRes = 
         await usuario.findOne({ email: mail }).then(resp => {
@@ -66,7 +75,7 @@ controlador.mailRecuperarPass =
                         var htmlToSend = template(replacements);
                         //Definimos el email
                         var mailOptions = {
-                            from: 'Sistema Jatun Newen',
+                            from: 'personas@jatunnewen.cl',
                             to: mail,
                             subject: 'Correo de recuperacion de contraseña',
                             html: htmlToSend
@@ -79,7 +88,7 @@ controlador.mailRecuperarPass =
                             } else {
                                 console.log(info);
                                 console.log("Email sent");
-                                res.status(200).jsonp(req.body);
+                                // res.status(200).jsonp(req.body);
                             }
                         });
                     });
@@ -103,7 +112,6 @@ controlador.mailSoporte =
     async (req, res) => {
         let { nombre, apellido, rut, telefono, mensaje } = req.body;
         // const usuarioRes = 
-
         readHTMLFile('./src/recursos/plantillaMailSoporte.html', function (err, html) {
             var template = handlebars.compile(html);
             var replacements = {
@@ -115,9 +123,9 @@ controlador.mailSoporte =
             var htmlToSend = template(replacements);
             //Definimos el email
             var mailOptions = {
-                from: 'Sistema Jatun Newen',
-                to: "cvidal@socialventis.cl",
-                subject: 'Correo de contacto soporte',
+                from: 'personas@jatunnewen.cl',
+                to: "personas@jatunnewen.cl",
+                subject: 'Correo de soporte',
                 html: htmlToSend
             };
             // Enviamos el email
@@ -131,9 +139,6 @@ controlador.mailSoporte =
                 }
             });
         });
-
-
-
     };
 
 
