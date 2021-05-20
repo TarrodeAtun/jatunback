@@ -7,7 +7,7 @@ const cors = require('cors');
 const morgan = require("morgan");
 
 //Configuraciones
-app.set('port', 4000);
+app.set('port', 3000);
 
 //middlewares
 app.use(cors());
