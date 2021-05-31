@@ -15,6 +15,8 @@ router.route('/')
 
 router.route('/worker/obtenertrabajadores')
     .get(controlador.todosTrabajadores)
+router.route('/worker/trabajadoresPost')
+    .post(controlador.todosTrabajadoresPost)
 router.route('/worker/obtenerjefes')
     .get(controlador.todosJefes)
 
@@ -73,14 +75,44 @@ router.route('/worker/ficha/hojavida/modificarAmonestacion')
 router.route('/worker/ficha/hojavida/eliminarAmonestacion')
     .post(controlador.eliminarAmonestacion)
 
-router.route('/worker/turnos/:fecha')
-    .get(controlador.obtenerTurnos)
+/*****  TURNOS  ******/
+
+/*  obtener  */
+router.route('/worker/turnos/')
+    .post(controlador.obtenerTurnos) /*obtiene los turnos de la semana*/
+router.route('/worker/turnos/especifico/')
+    .post(controlador.obtenerTurnosDia)/*obtiene los turnos de un dia*/
+router.route('/worker/turnos/general/')
+    .post(controlador.obtenerTurnosGeneral)/*obtiene los turnos en general (uso paginador)*/
+router.route('/worker/turnos/ultimo/')
+    .post(controlador.obtenerTurnoUltimo)/*obtiene el ultimo turno*/
+router.route('/worker/turnos/turnoVigente/:rut')
+    .get(controlador.obtenerTurnoVigente)
+router.route('/worker/turnos/registros/:rut')
+    .get(controlador.registrosGraficos)
+
+router.route('/worker/turnos/paginas/') /*obtiene las paginas totales a partir del filtro*/
+    .post(controlador.turnosPaginas)
+
+
+/*  crud  */
 router.route('/worker/turnos/detalle/:id')
     .get(controlador.detalleTurno)
 router.route('/worker/turnos/create')
     .post(controlador.crearTurnos)
 router.route('/worker/turnos/modificar')
     .post(controlador.modificarTurno)
+
+/* interacciones */
+router.route('/worker/turnos/iniciar')
+    .post(controlador.iniciarTurno)
+router.route('/worker/turnos/pasarLista')
+    .post(controlador.pasarLista)
+router.route('/worker/turnos/subirAsistencia')
+    .post(controlador.subirAsistencia)
+router.route('/worker/turnos/finalizar')
+    .post(controlador.finalizarTurno)
+
 
 router.route('/conductores')
     .get(controlador.todosUsuarios)  //reemplazar por listado de conductores

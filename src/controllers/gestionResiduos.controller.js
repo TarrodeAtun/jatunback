@@ -783,7 +783,7 @@ controlador.modificarPlanManejo =
         await planesmanejos.findOneAndUpdate({ "_id": req.body._id }, nuevoPlan).then(prom => {
             console.log(prom);
             console.log(prom._id);
-            if (archivosrec) {
+            if (archivosrec) {  
                 arrayArchivos.forEach(archivo => {
                     var file = archivo[1];
                     var separado = file.name.split(".");

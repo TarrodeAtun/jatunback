@@ -11,6 +11,8 @@ const previsionales = require('../models/previsionales');
 const capacitaciones = require('../models/capacitaciones');
 const amonestaciones = require('../models/amonestaciones');
 const turnos = require('../models/turnos');
+const Mongoose = require("mongoose");
+const tamañoPag = 1;
 
 function quitarFormato(rutCrudo) {
     var strRut = new String(rutCrudo);
@@ -142,6 +144,24 @@ controlador.todosTrabajadores =
             res.json({ ok: true, data: resp });
         });
     }
+controlador.todosTrabajadoresPost =
+    async (req, res) => {
+        if (req.body.rut) {
+            console.log("rut");
+            match["trabajadores.rut"] = { "$eq": parseInt(req.body.rut) };
+        }
+        if (req.body.centro) {
+            console.log("cliente");
+            match["clienterut"] = { "$eq": parseInt(req.body.cliente) };
+        }
+        await usuario.aggregate([
+            { $match: { cargo: "2" } },
+            { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
+        ]).then(resp => {
+            // console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
+    }
 
 controlador.todosJefes =
     async (req, res) => {
@@ -251,7 +271,6 @@ controlador.obtenerContractuales =
 
 controlador.obtenerCapacitaciones =
     async (req, res) => {
-        console.log(req.params);
         const registros = await capacitaciones.find({ rut: req.params.id });
         console.log(registros);
         res.json({ ok: true, data: registros });
@@ -420,18 +439,30 @@ controlador.eliminarAmonestacion =
 controlador.obtenerTurnos =
     async (req, res) => {
         var today;
-        if (req.params.fecha) {
-            console.log(req.params.fecha);
-            var today = new Date(req.params.fecha);
+        console.log(req.body);
+        if (req.body.fecha) {
+            console.log(req.body.fecha);
+            var today = new Date(req.body.fecha);
         } else {
             today = new Date();
         }
         var firstday = new Date(today.setDate(today.getDate() - today.getDay()));
         var lastday = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-        console.log(firstday);
-        console.log(lastday);
+        var match = { "fecha": { "$gte": firstday, "$lte": lastday } };
+        if (req.body.rut) {
+            console.log("rut");
+            match["trabajadores.rut"] = { "$eq": parseInt(req.body.rut) };
+        }
+        if (req.body.cliente) {
+            console.log("cliente");
+            match["clienterut"] = { "$eq": parseInt(req.body.cliente) };
+        }
+        if (req.body.sector) {
+            console.log("sector");
+            match["sector"] = { "$eq": parseInt(req.body.sector) };
+        }
         const registros = turnos.aggregate([
-            { $match: { fecha: { $gte: firstday, $lte: lastday } } },
+            { $match: match },
             {
                 $lookup: {
                     from: 'servicios',
@@ -456,40 +487,382 @@ controlador.obtenerTurnos =
             },
             { $sort: { "fecha": 1 } }
         ]).then(resp => {
+            // console.log(resp);
+            res.json({ ok: true, data: resp });
+        }).catch(err => { console.log(err) });
+    }
+
+controlador.obtenerTurnosDia =
+    async (req, res) => {
+        console.log(req.body.fecha);
+        let fecha = new Date(req.body.fecha);
+        var match = { "fecha": { "$eq": fecha } };
+
+        const registros = turnos.aggregate([
+            { $match: match },
+            {
+                $lookup: {
+                    from: 'servicios',
+                    let: { "servicio": "$servicio" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$key", "$$servicio"] } } },
+                        { "$project": { "nombre": 1 } }
+                    ],
+                    as: 'datosServicio'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'sectores',
+                    let: { "sector": "$sector" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$key", "$$sector"] } } },
+                        { "$project": { "nombre": 1 } }
+                    ],
+                    as: 'datosSectores'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'clientes',
+                    let: { "clienterut": "$clienterut" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$rut", "$$clienterut"] } } },
+                        { "$project": { "nombre": 1 } }
+                    ],
+                    as: 'datosCliente'
+                }
+            },
+            { "$unwind": "$datosCliente" },
+            { "$unwind": "$datosSectores" },
+            { "$unwind": "$datosServicio" },
+        ]).then(resp => {
+            // console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
+    }
+
+controlador.detalleTurno =
+    async (req, res) => {
+        console.log(req.params.id);
+        const registros = turnos.aggregate([
+            { $match: { _id: Mongoose.Types.ObjectId(req.params.id) } },
+            {
+                $lookup: {
+                    from: 'servicios', let: { "servicio": "$servicio" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$key", "$$servicio"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosServicio'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'sectores', let: { "sector": "$sector" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$key", "$$sector"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosSectores'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'clientes', let: { "clienterut": "$clienterut" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$rut", "$$clienterut"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosCliente'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'usuarios', let: { "rut": "$jefeCuadrilla" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$rut", "$$rut"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosJefe'
+                }
+            },
+            { "$unwind": "$datosJefe" },
+            { "$unwind": "$datosCliente" },
+            { "$unwind": "$datosSectores" },
+            { "$unwind": "$datosServicio" },
+        ]).then(resp => {
             console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
+
+
 controlador.crearTurnos =
     async (req, res) => {
         console.log(req.body);
         var { clienterut, sector, servicio, tipoTurno, fecha, inicio, termino, jefe, trabajadores, frecuencia } = req.body;
+        let insertTrabajadores = [];
+        for (trabajador of trabajadores) {
+            let datos = {
+                "rut": parseInt(trabajador.rut),
+                "dv": parseInt(trabajador.dv),
+                "nombre": trabajador.nombre,
+                "apellido": trabajador.apellido,
+                "estado": 0,
+            }
+            insertTrabajadores.push(datos);
+        }
         for (let turno of frecuencia) {
             let fechaFre = turno.fecha;
-            console.log(fechaFre);
-            var nuevoTurno = await new turnos({ clienterut, sector, servicio, tipoTurno, fecha: fechaFre, inicio, termino, estado: 0, jefeCuadrilla: jefe, trabajadores });
+            var nuevoTurno = await new turnos({ clienterut, sector, servicio, tipoTurno, fecha: fechaFre, inicio, termino, estado: 0, jefeCuadrilla: jefe, trabajadores: insertTrabajadores });
             await nuevoTurno.save().then(prom => {
-                console.log(prom);
+                res.json({ ok: true, data: prom, estado: "success", mensaje: "Turno Creado!" });
             }).catch(err => {
                 console.log(err);
             });
         }
     }
-controlador.detalleTurno =
-    async (req, res) => {
-        const turnoRes = await turnos.findOne({ _id: req.params.id });
-        res.json({ ok: true, data: turnoRes });
-  
-    }
+
 
 controlador.modificarTurno =
     async (req, res) => {
         console.log(req.body);
         var { clienterut, sector, servicio, tipoTurno, fecha, inicio, termino, trabajadores } = req.body;
         var jefeCuadrilla = req.body.jefe;
-        const nuevaTurno = { clienterut, sector, servicio, tipoTurno, fecha, inicio, termino, jefeCuadrilla, trabajadores }; // creamos un objeto usuario con los datos recibidos
-        await turnos.findOneAndUpdate({ "_id": req.body.id }, nuevaTurno)
+        let insertTrabajadores = [];
+        for (trabajador of trabajadores) {
+            let datos = {
+                "rut": parseInt(trabajador.rut),
+                "dv": parseInt(trabajador.dv),
+                "nombre": trabajador.nombre,
+                "apellido": trabajador.apellido,
+                "estado": 0,
+            }
+            insertTrabajadores.push(datos);
+        }
+        const nuevaTurno = { clienterut, sector, servicio, tipoTurno, fecha, inicio, termino, jefeCuadrilla, trabajadores: insertTrabajadores }; // creamos un objeto usuario con los datos recibidos
+        await turnos.findOneAndUpdate({ "_id": req.body.id }, nuevaTurno).then(prom => {
+            res.json({ ok: true, data: prom, estado: "success", mensaje: "Turno Modificado!" });
+        })
     }
+controlador.iniciarTurno =
+    async (req, res) => {
+        await turnos.findOneAndUpdate({ "_id": req.body.id }, { estado: 1 }, { new: true }).then(prom => {
+            res.json({ ok: true, data: prom, estado: "success", mensaje: "Turno Iniciado" });
+        })
+    }
+controlador.subirAsistencia =
+    async (req, res) => {
+        await turnos.findOneAndUpdate({ "_id": req.body.id }, { estado: 2 }, { new: true }).then(prom => {
+            turnos.findOneAndUpdate({ "_id": req.body.id, "trabajadores.estado": 0 },
+                { "$set": { "trabajadores.$.estado": 3 } }, { new: true }).then(prom => {
+                    console.log(prom);
+                    res.json({ ok: true, data: prom, estado: "success", mensaje: "Asistencia Subida" });
+                })
+        })
+
+    }
+controlador.finalizarTurno =
+    async (req, res) => {
+        var trabajadores = JSON.parse(req.body.trabajadores);
+        var { rendimiento, bolsas, guantes, basureros, escobillon, palas, observaciones, ruta, calle, metas, comentariometas } = req.body;
+        var archivosrec = req.files;
+        var insertTrabajadores = [];
+        var direcciones = [];
+        for (trabajador of trabajadores) {
+            let datos = {
+                "rut": parseInt(trabajador.rut),
+                "dv": parseInt(trabajador.dv),
+                "nombre": trabajador.nombre,
+                "apellido": trabajador.apellido,
+                "estado": parseInt(trabajador.estado),
+                "chaleco": (trabajador.chaleco) ? trabajador.chaleco : false,
+                "zapatos": (trabajador.zapatos) ? trabajador.zapatos : false,
+                "gorro": (trabajador.gorro) ? trabajador.gorro : false,
+                "casco": (trabajador.casco) ? trabajador.casco : false,
+                "audio": (trabajador.audio) ? trabajador.audio : false,
+            }
+            insertTrabajadores.push(datos);
+        } if (archivosrec) {
+            var arrayArchivos = Object.entries(archivosrec);
+        }
+
+        var turnofinalizado = await { rendimiento, bolsas, guantes, basureros, trabajadores: insertTrabajadores, escobillon, palas, observaciones, ruta, calle, metas, comentariometas, estado: 3 };
+        await turnos.findOneAndUpdate({ "_id": req.body.id }, turnofinalizado, { new: true }).then(prom => {
+            console.log(prom);
+            if (archivosrec) {
+                arrayArchivos.forEach(archivo => {
+                    var file = archivo[1];
+                    var separado = file.name.split(".");
+                    var formato = separado[1];
+                    uploadPath = './uploads/turnos/' + req.body.id + "/" + archivo[0] + "." + formato;
+                    var bdData = {
+                        "input": archivo[0],
+                        "url": "/turnos/" + req.body.id + "/" + archivo[0] + "." + formato
+                    }
+                    direcciones.push(bdData)
+                    file.mv(uploadPath, function (err) {
+                        console.log(err);
+                        if (err) {
+                            console.log(err);
+                        }
+                    });
+                });
+                turnos.findOneAndUpdate({ "_id": req.body.id }, { "imagen": direcciones }).then(asd => {
+                    console.log(asd);
+                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                })
+            } else {
+                res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+            }
+        })
+    }
+controlador.pasarLista =
+    async (req, res) => {
+        let datos = req.body.datos;
+        console.log(datos);
+        await turnos.findOneAndUpdate({ "_id": req.body.id, "trabajadores.rut": datos.rut },
+            { "$set": { "trabajadores.$.estado": 1 } }, { new: true }).then(prom => {
+                console.log(prom);
+                res.json({ ok: true, data: prom, estado: "success", mensaje: "Asistencia Confirmada" });
+            })
+    }
+
+
+controlador.obtenerTurnoVigente =
+    async (req, res) => {
+        let fechaProv = new Date();
+        let fecha = new Date(Date.UTC(fechaProv.getFullYear(), fechaProv.getMonth(), fechaProv.getDate()));
+        console.log(fecha);
+        let rut = parseInt(req.params.rut);
+        const registros = turnos.aggregate([
+            {
+                $match: {
+                    $and: [
+                        {
+                            fecha: { $eq: fecha }
+                        },
+                        {
+                            estado: 1
+                        },
+                        {
+                            trabajadores: { $elemMatch: { rut: rut, estado: 0 } },
+                        }
+
+                    ]
+                }
+            }, {
+                $project: { "_id": 1 }
+            }
+        ]).then(resp => {
+            console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
+    }
+
+controlador.registrosGraficos =
+    async (req, res) => {
+        let rut = parseInt(req.params.rut);
+        let match = {};
+        match["$and"] = [{ "trabajadores": { "$elemMatch": { "rut": rut, "estado": 3 } } }];
+        await turnos.aggregate([
+            {
+                $match: match
+            },
+            {
+                $lookup: {
+                    from: 'servicios',
+                    let: { "servicio": "$servicio" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$key", "$$servicio"] } } },
+                        { "$project": { "nombre": 1 } }
+                    ],
+                    as: 'datosServicio'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'sectores',
+                    let: { "sector": "$sector" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$key", "$$sector"] } } },
+                        { "$project": { "nombre": 1 } }
+                    ],
+                    as: 'datosSectores'
+                }
+            },
+            { "$unwind": "$datosSectores" },
+            { "$unwind": "$datosServicio" },
+        ]).then(resp => {
+            console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
+    }
+controlador.obtenerTurnosGeneral =
+    async (req, res) => {
+        var match = {};
+        if (req.body.rut) {
+            match["trabajadores"] = { "$elemMatch": { "rut": req.body.rut } };
+        }
+        var page = 1;
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        const skip = (page - 1) * tamañoPag;
+        turnos.aggregate([
+            { $match: match },
+            {
+                $lookup: {
+                    from: 'servicios', let: { "servicio": "$servicio" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$key", "$$servicio"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosServicio'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'sectores', let: { "sector": "$sector" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$key", "$$sector"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosSectores'
+                }
+            },
+            { $sort: { "fecha": 1 } },
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag },
+        ]).then(resp => {
+            // console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
+    }
+controlador.obtenerTurnoUltimo =
+    async (req, res) => {
+        console.log(req.body);
+        var match = {};
+        if (req.body.rut) {
+            match["trabajadores.rut"] = { "$eq": req.body.rut };
+        }
+        turnos.aggregate([
+            { $match: match },
+            {
+                $lookup: {
+                    from: 'servicios', let: { "servicio": "$servicio" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$key", "$$servicio"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosServicio'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'sectores', let: { "sector": "$sector" }, pipeline: [{ "$match": { "$expr": { "$eq": ["$key", "$$sector"] } } }, { "$project": { "nombre": 1 } }],
+                    as: 'datosSectores'
+                }
+            },
+            { $sort: { "fecha": 1 } }
+        ]).then(resp => {
+            res.json({ ok: true, data: resp });
+        });
+    }
+
+controlador.turnosPaginas =
+    async (req, res) => {
+        var match = {};
+        if (req.body.rut) {
+            match["trabajadores"] = { "$elemMatch": { "rut": req.body.rut } };
+        }
+        turnos.aggregate([
+            { $match: match },
+            { $sort: { "fecha": 1 } },
+            { $count: "registros" }
+        ]).then(resp => {
+            let registros = resp[0].registros;
+            let paginas = Math.ceil(registros / tamañoPag)
+            console.log();
+            res.json({ ok: true, paginas: paginas });
+        });
+    }
+
+
+/* registros para paginacion */
 
 
 module.exports = controlador;
