@@ -88,14 +88,14 @@ controlador.mailRecuperarPass =
                             } else {
                                 console.log(info);
                                 console.log("Email sent");
-                                // res.status(200).jsonp(req.body);
+                                res.json({ estado: "success", mensaje: "Mensaje enviado" });
                             }
                         });
                     });
                 })
 
             } else {
-                console.log("no");
+                res.json({ estado: "error", mensaje: "No se ha encontrado usuario con ese mail" });
             }
         }).catch(err => {
             console.log(err);

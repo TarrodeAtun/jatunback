@@ -695,10 +695,10 @@ controlador.finalizarTurno =
                 });
                 turnos.findOneAndUpdate({ "_id": req.body.id }, { "imagen": direcciones }).then(asd => {
                     console.log(asd);
-                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                    res.json({ estado: "success", mensaje: "Turno finalizado correctamente" });
                 })
             } else {
-                res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                res.json({ estado: "success", mensaje: "Turno finalizado correctamente" });
             }
         })
     }
