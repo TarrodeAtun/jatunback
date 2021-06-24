@@ -114,7 +114,7 @@ controlador.crearRetiro =
                     console.log(err);
                 });
             }
-            res.json({ estado: "success", mensaje: "Retiro Ingresada exitosamente" });
+            res.json({ estado: "success", mensaje: "Programacion de retiro ingresado exitosamente" });
         } else {
 
         }

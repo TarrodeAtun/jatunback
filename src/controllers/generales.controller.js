@@ -9,6 +9,7 @@ const servicios = require('../models/servicios');
 const sectores = require('../models/sectores');
 const tiposturnos = require('../models/tiposturnos');
 const centroscostos = require('../models/centroscostos');
+const turnos = require('../models/turnos');
 
 const codigosLer = require('../models/codigosLer');
 const categoriaslers = require('../models/categoriasLer');
@@ -110,6 +111,29 @@ controlador.obtenerSubcategoriasLer =
         res.json({ ok: true, data: registros });
 
     }
+controlador.obtenerJornadas =
+async (req, res) => {
+    var today;
+    var match = {};
+    if (req.body.fecha) {
+        var today = new Date(req.body.fecha);
+    } else {
+        today = new Date();
+    }
+    console.log(today);
+    match["fecha"] = { "$eq": today  };
+    if (req.body.clienteRut) {match["clienterut"] = { "$eq": parseInt(req.body.clienteRut) };}
+    if (req.body.sector) {match["sector"] = { "$eq": parseInt(req.body.sector) };}
+    if (req.body.sector) {match["servicio"] = { "$eq": parseInt(req.body.servicio) };}
+    const registros = turnos.aggregate([
+        { $match: match },
+        { $sort: { "fecha": 1 } }
+    ]).then(resp => {
+        console.log(resp);
+        res.json({ ok: true, data: resp });
+    }).catch(err => { console.log(err) });
+}
+
 
 
 

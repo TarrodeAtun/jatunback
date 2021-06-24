@@ -2,7 +2,7 @@ const { Schema, model } = require('mongoose');
 
 const usuario = new Schema(
     {
-        rut: { type: Number, required: true, unique: true },
+        rut: { type: Number, required: true },
         dv: { type: Number, required: true },
         nombre: { type: String, required: true, trim: true },
         apellido: { type: String, required: true, trim: true },
@@ -14,9 +14,10 @@ const usuario = new Schema(
         emergencias: { type: Object, required: true },
         bancarios: { type: Object, required: true },
         password: { type: String, required: true },
-        perfil: { type: String, required: true },
-        cargo: { type: String, required: true },
-        perfilSec: { type: String, required: true },
+        perfil: { type: Number, required: true },
+        cargo: { type: Number, required: true },
+        perfilSec: { type: Number, required: true },
+        activo: { type: Number},
         recuperacion: { type: String}
     },
     { timestamps: true }

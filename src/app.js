@@ -7,7 +7,7 @@ const cors = require('cors');
 const morgan = require("morgan");
 
 //Configuraciones
-app.set('port', 3000);
+app.set('port', 4000);
 
 //middlewares
 app.use(cors());
@@ -23,7 +23,7 @@ app.use('/api/bienestar', require('./routes/bienestar'));
 app.use('/api/generales', require('./routes/generales'));
 app.use('/api/gestion-residuos', require('./routes/gestionResiduos'));        
 
-app.use(express.static('uploads'));
+app.use(express.static('uploads')); 
 app.use('/media', express.static('./uploads'));
 
 app.use(express.static('assets'));

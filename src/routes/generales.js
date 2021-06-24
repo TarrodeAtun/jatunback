@@ -51,5 +51,9 @@ router.route('/categoriasler/')
 router.route('/subcategoriasler/')
     .post(controlador.obtenerSubcategoriasLer)
 
+router.route('/jornadas/')
+    .post(controlador.obtenerJornadas)
+
+
 
 module.exports = router;

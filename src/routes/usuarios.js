@@ -5,7 +5,7 @@ const router = Router();
 
 const controlador = require('../controllers/usuarios.controller.js');
 
-router.use(verificarToken);
+// router.use(verificarToken);
 
 router.route('/')
     .get(controlador.todosUsuarios)
@@ -26,6 +26,8 @@ router.route('/worker/update/')
     .put(controlador.actualizaUsuario)
 router.route('/worker/create/')
     .post(controlador.ingresarUsuario)
+router.route('/worker/eliminar/')
+    .post(controlador.eliminarUsuario)
 
 
 router.route('/worker/basic')
@@ -75,13 +77,16 @@ router.route('/worker/ficha/hojavida/modificarAmonestacion')
 router.route('/worker/ficha/hojavida/eliminarAmonestacion')
     .post(controlador.eliminarAmonestacion)
 
+router.route('/worker/desempeno')
+    .post(controlador.desempeno)
+
 /*****  TURNOS  ******/
 
 /*  obtener  */
 router.route('/worker/turnos/')
     .post(controlador.obtenerTurnos) /*obtiene los turnos de la semana*/
 router.route('/worker/turnos/especifico/')
-    .post(controlador.obtenerTurnosDia)/*obtiene los turnos de un dia*/
+    .post(controlador.obtenerTurnosDia)/*obtiene los turnos de un dia especifico*/
 router.route('/worker/turnos/general/')
     .post(controlador.obtenerTurnosGeneral)/*obtiene los turnos en general (uso paginador)*/
 router.route('/worker/turnos/ultimo/')
@@ -90,9 +95,13 @@ router.route('/worker/turnos/turnoVigente/:rut')
     .get(controlador.obtenerTurnoVigente)
 router.route('/worker/turnos/registros/:rut')
     .get(controlador.registrosGraficos)
+router.route('/worker/turnos/mes/')
+    .post(controlador.obtenerTurnosMes)
 
 router.route('/worker/turnos/paginas/') /*obtiene las paginas totales a partir del filtro*/
     .post(controlador.turnosPaginas)
+router.route('/worker/turnos/solicitudes/paginas/')
+    .post(controlador.solicitudesPaginas)
 
 
 /*  crud  */
@@ -102,6 +111,23 @@ router.route('/worker/turnos/create')
     .post(controlador.crearTurnos)
 router.route('/worker/turnos/modificar')
     .post(controlador.modificarTurno)
+
+router.route('/worker/turnos/crear-reemplazo-perfil')
+    .post(controlador.crearReemplazoPerfil)
+router.route('/worker/turnos/listado-solicitudes')
+    .post(controlador.listadoSolicitudes)
+router.route('/worker/turnos/solicitudes/respuesta')
+    .post(controlador.respuestaSolicitud)
+
+router.route('/worker/turnos/asistencia/emergencias/')
+    .post(controlador.obtenerEmergenciasAsistencia)
+router.route('/worker/turnos/asistencia/emergencias/crear')
+    .post(controlador.crearEmergenciasAsistencia)
+router.route('/worker/turnos/asistencia/emergencias/eliminar')
+    .post(controlador.eliminarEmergenciaAsistencia)
+router.route('/worker/turnos/asistencia/emergencias/detalle/:id')
+    .get(controlador.obtenerEmergenciaAsistencia)
+
 
 /* interacciones */
 router.route('/worker/turnos/iniciar')

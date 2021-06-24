@@ -13,6 +13,7 @@ const turnos = new Schema(
         estado: { type: Number, required: true },
         jefeCuadrilla: { type: Number, required: true },
         trabajadores: { type: Array, required: true },
+        reemplazos: { type: Array},
         rendimiento: { type: Number },
         bolsas: { type: Boolean },
         guantes: { type: Boolean },
