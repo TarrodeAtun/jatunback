@@ -35,7 +35,7 @@ controlador.login =
             //     })
             // }
             var perfilSesion = "";
-            if(usuario.perfil === "1"){
+            if(usuario.perfil === 1){
                 perfilSesion = null
             }else{
                 perfilSesion = usuario.perfil;
