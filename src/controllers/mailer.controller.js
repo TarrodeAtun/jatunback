@@ -7,17 +7,31 @@ const controlador = {};
 const usuario = require('../models/usuario');
 
 var transporter = nodemailer.createTransport({
-    host: "mail.jatunnewen.cl",
+    host: "mail.itarrow.cl",
     port: 465,
     secure: true,
     auth: {
-        user: 'personas@jatunnewen.cl',
-        pass: '123jatunnewen456'
+        user: 'noresponder@itarrow.cl',
+        pass: '1T4rr0w2k18'
     },
     tls: {
         rejectUnauthorized: false
     }
 });
+
+// var transporter = nodemailer.createTransport({
+//     host: "mail.jatunnewen.cl",
+//     port: 465,
+//     secure: true,
+//     auth: {
+//         user: 'personas@jatunnewen.cl',
+//         pass: '123jatunnewen456'
+//     },
+//     tls: {
+//         rejectUnauthorized: false
+//     }
+// });
+
 
 
 
@@ -123,8 +137,8 @@ controlador.mailSoporte =
             var htmlToSend = template(replacements);
             //Definimos el email
             var mailOptions = {
-                from: 'personas@jatunnewen.cl',
-                to: "personas@jatunnewen.cl",
+                from: 'noresponder@itarrow.cl',
+                to: "cvidal@itarrow.cl",
                 subject: 'Correo de soporte',
                 html: htmlToSend
             };
@@ -132,7 +146,7 @@ controlador.mailSoporte =
             transporter.sendMail(mailOptions, function (error, info) {
                 if (error) {
                     console.log(error);
-                    res.send(500, err.message);
+                    res.send(500, err);
                 } else {
                     console.log("Email sent");
                     res.status(200).jsonp(req.body);

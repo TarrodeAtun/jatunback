@@ -18,10 +18,27 @@ controlador.obtenerEncuestas =
         res.json({ ok: true, data: registros });
     }
 
+controlador.obtenerMisEncuestas =
+    async (req, res) => {
+        const registros = await encuesta.find({ "trabajadores": { "$elemMatch": { "rut": parseInt(req.body.rut), "estado": 0 } } }); //consultamos todos los registros de la tabla usuarios y lo almacenamos
+        res.json({ ok: true, data: registros });
+    }
+
 controlador.crearEncuesta =
     async (req, res) => {
-        var { nombre, preguntas } = req.body;
-        const nuevaEncuesta = new encuesta({ nombre, preguntas });
+        var { nombre, preguntas, trabajadores } = req.body;
+        let insertTrabajadores = [];
+        for (trabajador of trabajadores) {
+            let datos = {
+                "rut": parseInt(trabajador.rut),
+                "dv": parseInt(trabajador.dv),
+                "nombre": trabajador.nombre,
+                "apellido": trabajador.apellido,
+                "estado": 0,
+            }
+            insertTrabajadores.push(datos);
+        }
+        const nuevaEncuesta = new encuesta({ nombre, preguntas, trabajadores: insertTrabajadores });
         console.log(nuevaEncuesta);
         await nuevaEncuesta.save().then(prom => {
             console.log(prom);
@@ -60,12 +77,15 @@ controlador.eliminarEncuesta =
     }
 controlador.responderEncuesta =
     async (req, res) => {
-        var { idEncuesta, idUsuario, respuestas } = req.body;
-        const registro = new respuestaEncuesta({ idEncuesta, idUsuario, respuestas });
+        var { idEncuesta, rut, respuestas } = req.body;
+        const registro = new respuestaEncuesta({ idEncuesta, rut, respuestas });
         console.log(registro);
         await registro.save().then(prom => {
             console.log(prom);
-            res.json({ estado: "success", mensaje: "Encuesta respondida exitosamente" });
+            encuesta.findOneAndUpdate({ _id: idEncuesta, "trabajadores.rut": parseInt(rut) }, { "$set": { "trabajadores.$.estado": 1 } }).then(prom2 => {
+                res.json({ estado: "success", mensaje: "Encuesta respondida exitosamente" });
+            })
+
         }).catch(err => {
             res.json({ estado: "error", err: err });
         });
@@ -79,6 +99,7 @@ controlador.verEncuesta =
         var enunciados = [];
         var options = [];
         var preguntas = registroEncuesta.preguntas;
+        var trabajadores = registroEncuesta.trabajadores;
         var preResultados = [];
         respuestasPreProcesadas = respuestas.map((resultado, index) => {
             preResultados[index] = resultado.respuestas;
@@ -106,7 +127,8 @@ controlador.verEncuesta =
             nombre: registroEncuesta.nombre,
             preguntas: enunciados,
             respuestas: conteo,
-            opciones: options
+            opciones: options,
+            trabajadores: trabajadores
         }
         res.json({ ok: true, data: resultado });
     }
@@ -146,7 +168,36 @@ controlador.obtenerConsultas =
     }
 controlador.obtenerMisConsultas =
     async (req, res) => {
-
+        console.log(req.params.rut);
+        await consulta.aggregate([
+            { $match: { autor: parseInt(req.params.rut) } },
+            {
+                $lookup: {
+                    from: 'usuarios',
+                    let: { "autor": "$autor" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$rut", "$$autor"] } } },
+                        { "$project": { "nombre": 1, "apellido": 1 } }
+                    ],
+                    as: 'datosAutor'
+                }
+            },
+            {
+                $lookup: {
+                    from: 'usuarios',
+                    let: { "ultimaRespuesta": "$ultimaRespuesta" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$rut", "$$ultimaRespuesta"] } } },
+                        { "$project": { "nombre": 1, "apellido": 1 } }
+                    ],
+                    as: 'datosUltimaRespuesta'
+                }
+            },
+            { $sort: { "fechaRespuesta": -1 } }
+        ]).then(resp => {
+            console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
     }
 controlador.obtenerDetalleConsulta =
     async (req, res) => {
@@ -175,11 +226,11 @@ controlador.obtenerDetalleConsulta =
             },
             { $sort: { "fechaRespuesta": 1 } }
         ]).then(resp => {
-            consulta.findOne({ _id: req.params.id }).then(consultaResp =>{
-                res.json({ ok: true, data: resp, estadoConsulta: consultaResp.estado});
+            consulta.findOne({ _id: req.params.id }).then(consultaResp => {
+                res.json({ ok: true, data: resp, estadoConsulta: consultaResp.estado });
             });
 
-           
+
         });
 
     }

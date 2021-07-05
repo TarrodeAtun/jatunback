@@ -34,19 +34,54 @@ controlador.todosUsuarios =
 
 controlador.ingresarUsuario =
     async (req, res) => {
-        var { rut, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, perfilSec, cargo, bancarios } = req.body; //copiamos los datos recibidos en constantes
+        var { rut, nombre, apellido, fechaNac, email, telefono, hijos, password, perfil, perfilSec, cargo, centroCosto } = req.body; //copiamos los datos recibidos en constantes
+        var emergencias = JSON.parse(req.body.emergencias);
+        var bancarios = JSON.parse(req.body.bancarios);
+        console.log(req.body);
         //extraccion rut
         let rutArray = req.body.rut.split("-");
         rut = rutArray[0];
         while (rut.indexOf(".") != -1) {
             rut = rut.replace(".", "");
         }
+
         let dv = rutArray[1];
+        var archivosrec = req.files;
+        var arrayArchivos = [];
+        var direcciones = [];
+        if (archivosrec) {
+            arrayArchivos = Object.entries(archivosrec);
+        }
         const passencripted = bcrypt.hashSync(password, 10);
         password = passencripted;
-        const nuevoUsuario = new usuario({ rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, perfilSec, cargo, bancarios, activo: 1 }); // creamos un objeto usuario con los datos recibidos
-        await nuevoUsuario.save().then(prom => {
-            res.json({ estado: "success", mensaje: "el usuario ha sido ingresado exitosamente", id: prom._id });
+        const nuevoUsuario = new usuario({ rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, perfilSec, cargo, bancarios, activo: 1, centroCosto }); // creamos un objeto usuario con los datos recibidos
+        await nuevoUsuario.save().then(async prom => {
+            if (arrayArchivos.length > 0) {
+                console.log("hay imagen");
+                await arrayArchivos.forEach(async archivo => { //por cada archivo que llega lo ingresamos al array;
+                    console.log(archivo);
+                    var file = archivo[1];
+                    var separado = file.name.split(".");
+                    var formato = separado[1];
+                    uploadPath = './uploads/users/' + rut + "/" + archivo[0] + "." + formato;
+                    var bdData = {
+                        "input": archivo[0],
+                        "url": "/" + rut + "/" + archivo[0] + "." + formato
+                    }
+                    direcciones.push(bdData)
+                    file.mv(uploadPath, function (err) {
+                        if (err) {
+                            console.log(err);
+                        }
+                    });
+                });
+                console.log(direcciones);
+                usuario.findOneAndUpdate({ _id: prom._id }, { "imagen": direcciones }).then(asd => {
+                    res.json({ estado: "success", mensaje: "el usuario ha sido ingresado exitosamente", id: prom._id });
+                })
+            } else {
+                res.json({ estado: "success", mensaje: "el usuario ha sido ingresado exitosamente", id: prom._id });
+            }
         }).catch(err => {
             if (err.code === 11000) {
                 res.json({ estado: "warning", mensaje: "¡El rut ingresado ya existe!" });
@@ -62,7 +97,10 @@ controlador.obtenerUsuario =
 
 controlador.actualizaUsuario =
     async (req, res) => {
-        var { id, rut, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
+        var { id, rut, nombre, apellido, fechaNac, email, telefono, hijos, perfil, perfilSec, cargo, centroCosto } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
+        var emergencias = JSON.parse(req.body.emergencias);
+        var bancarios = JSON.parse(req.body.bancarios);
+        console.log(req.body);
         //extraccion rut
         let rutArray = req.body.rut.split("-");
         rut = rutArray[0];
@@ -70,9 +108,42 @@ controlador.actualizaUsuario =
             rut = rut.replace(".", "");
         }
         let dv = rutArray[1];
-        const nuevoUsuario = { rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios }; //creamos un array usuario con los datos nuevos
-        await usuario.findOneAndUpdate({ _id: id }, nuevoUsuario).then(prom => { //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
-            res.json({ estado: "success", mensaje: "Datos modificados exitosamente" });
+
+        var archivosrec = req.files;
+        var arrayArchivos = [];
+        if (archivosrec) {
+            arrayArchivos = Object.entries(archivosrec);
+        }
+        var direcciones = [];
+        const nuevoUsuario = { rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios, centroCosto }; //creamos un array usuario con los datos nuevos
+        await usuario.findOneAndUpdate({ _id: id }, nuevoUsuario).then(async prom => { //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
+            if (arrayArchivos.length > 0) {
+                console.log("hay imagen");
+                await arrayArchivos.forEach(archivo => { //por cada archivo que llega lo ingresamos al array;
+                    console.log(archivo);
+                    var file = archivo[1];
+                    var separado = file.name.split(".");
+                    var formato = separado[1];
+                    uploadPath = './uploads/users/' + rut + "/" + archivo[0] + "." + formato;
+                    var bdData = {
+                        "input": archivo[0],
+                        "url": "/" + rut + "/" + archivo[0] + "." + formato
+                    }
+                    direcciones.push(bdData)
+                    file.mv(uploadPath, function (err) {
+                        if (err) {
+                            console.log(err);
+                        }
+                    });
+                });
+                console.log(direcciones);
+                usuario.findOneAndUpdate({ _id: id }, { "imagen": direcciones }).then(asd => {
+                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente", data: asd });
+                })
+            } else {
+                console.log(prom);
+                res.json({ estado: "success", mensaje: "Datos ingresados correctamente", data: prom });
+            }
         }).catch(err => {
             console.log(err);
             if (err.code === 11000) {
@@ -144,10 +215,10 @@ controlador.eliminarUsuario =
 controlador.todosTrabajadores =
     async (req, res) => {
         await usuario.aggregate([
-            { $match: { cargo: "2", activo: 1 } },
+            { $match: { cargo: 2, activo: 1 } },
             { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
         ]).then(resp => {
-            // console.log(resp);
+            console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
@@ -155,18 +226,44 @@ controlador.todosTrabajadoresPost =
     async (req, res) => {
         var match = {};
         if (req.body.cargo) {
-            match["cargo"] = "2";
+            match["cargo"] = 2;
         }
         if (req.body.rut) {
-            match["rut"] = req.body.rut;
+            let rutArray = req.body.rut.split("-");
+            rut = rutArray[0];
+            while (rut.indexOf(".") != -1) {
+                rut = rut.replace(".", "");
+            }
+            console.log(rut);
+            match["rut"] = parseInt(rut);
         }
+        if (req.body.centro) {
+            match["centroCosto"] = parseInt(req.body.centro);
+        }
+        var page = 1;
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        const skip = (page - 1) * tamañoPag;
         match["activo"] = 1;
+        var paginas = 1;
         await usuario.aggregate([
             { $match: match },
-            { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
+            { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1, "centroCosto": 1 } },
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag },
         ]).then(resp => {
+            usuario.aggregate([
+                { $match: match },
+                { $count: "registros" }
+            ]).then(re => {
+                let registros = re[0].registros;
+                paginas = Math.ceil(registros / tamañoPag)
+                console.log(paginas);
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
             // console.log(resp);
-            res.json({ ok: true, data: resp });
+            
         });
     }
 
@@ -219,8 +316,8 @@ controlador.ingresarPrevisional =
     async (req, res) => {
         console.log("llego");
         console.log(req.body);
-        var { rut, afp, apv, valorApv, tipoSalud, prevision, pactada, valorSalud, montoSalud } = req.body;
-        const nuevoPrevisional = { afp, apv, valorApv, tipoSalud, prevision, pactada, valorSalud, montoSalud }; // creamos un objeto usuario con los datos recibidos
+        var { rut, afp, apv, montoApv, valorApv, tipoSalud, prevision, pactada, valorSalud, montoSalud } = req.body;
+        const nuevoPrevisional = { afp, apv, valorApv, montoApv, tipoSalud, prevision, pactada, valorSalud, montoSalud }; // creamos un objeto usuario con los datos recibidos
         await previsionales.findOneAndUpdate({ "rut": req.body.rut }, nuevoPrevisional, { upsert: true })
             .then(prom => {
                 res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
@@ -241,30 +338,44 @@ controlador.ingresarContractuales =
             arrayArchivos = Object.entries(archivosrec);
         }
         var direcciones = [];
-        if (arrayArchivos) {
-            arrayArchivos.forEach(archivo => {
-                var file = archivo[1];
-                var separado = file.name.split(".");
-                var formato = separado[1];
-                uploadPath = './uploads/users/' + req.body.rut + "/" + archivo[0] + "." + formato;
-                var bdData = {
-                    "input": archivo[0],
-                    "url": "/" + req.body.rut + "/" + archivo[0] + "." + formato
-                }
-                direcciones.push(bdData)
-                file.mv(uploadPath, function (err) {
-                    console.log(err);
-                    if (err) {
-                        console.log(err);
-                    }
-                });
-            });
-        }
+
         var { rut, direccion, comuna, ciudad, nacionalidad, profesion, estadocivil, hijos, carga, fechainic, fechaterm, tipoContrato } = req.body;
-        const nuevoContractual = { rut, direccion, comuna, ciudad, nacionalidad, profesion, estadocivil, hijos, carga, fechainic, fechaterm, tipoContrato, archivos: direcciones }; // creamos un objeto usuario con los datos recibidos
+        const nuevoContractual = { rut, direccion, comuna, ciudad, nacionalidad, profesion, estadocivil, hijos, carga, fechainic, fechaterm, tipoContrato }; // creamos un objeto usuario con los datos recibidos
         await contractuales.findOneAndUpdate({ "rut": req.body.rut }, nuevoContractual, { upsert: true })
-            .then(prom => {
-                res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+            .then(async prom => {
+                if (arrayArchivos) {
+                    let archivosOriginales = prom.archivos;
+                    await arrayArchivos.forEach(archivo => { //por cada archivo que llega lo ingresamos al array;
+                        var file = archivo[1];
+                        var separado = file.name.split(".");
+                        var formato = separado[1];
+                        uploadPath = './uploads/users/' + req.body.rut + "/" + archivo[0] + "." + formato;
+                        var bdData = {
+                            "input": archivo[0],
+                            "url": "/" + req.body.rut + "/" + archivo[0] + "." + formato
+                        }
+                        direcciones.push(bdData)
+                        file.mv(uploadPath, function (err) {
+                            if (err) {
+                                console.log(err);
+                            }
+                        });
+                    });
+                    await direcciones.forEach(function (archivo, indice) { //teniendo todos los archivos a ingresar recorremos para comparar cuales son nuevos y cuales existen
+                        archivosOriginales.find(function (original) {
+                            if (archivo.input === original.input) { // si son iguales, no hacemos nada
+                            } else { //sino pegamos el valor original
+                                direcciones.push(original)
+                            }
+                        });
+                    });
+                    contractuales.findOneAndUpdate({ "rut": req.body.rut }, { "archivos": direcciones }).then(asd => {
+                        res.json({ estado: "success", mensaje: "Datos ingresados correctamente", data: asd });
+                    })
+                } else {
+                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente", data: prom });
+                }
+
             }).catch(err => {
                 console.log(err);
                 if (err.code === 11000) {
@@ -1351,6 +1462,7 @@ controlador.crearEmergenciasAsistencia =
 
         var nuevaEmergencia = await new emergenciasAsistencias({ cliente, sector, servicio, fecha, hora, turno, tipo, clasificacion, observaciones });
         await nuevaEmergencia.save().then(prom => {
+
             arrayArchivos.forEach(archivo => {
                 var file = archivo[1];
                 var separado = file.name.split(".");
@@ -1367,6 +1479,7 @@ controlador.crearEmergenciasAsistencia =
                     }
                 });
             });
+
             emergenciasAsistencias.findOneAndUpdate({ "_id": prom._id }, { "imagen": direcciones }).then(asd => {
                 console.log(asd);
             })

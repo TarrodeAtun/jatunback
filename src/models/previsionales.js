@@ -6,6 +6,7 @@ const previsionales = new Schema(
         afp: { type: Number, required: true, trim: true },
         apv: { type: Number, required: true, trim: true },
         valorApv: { type: Number, required: true, trim: true },
+        montoApv: { type: Number, required: true, trim: true },
         tipoSalud: { type: Number, required: true, trim: true },
         prevision: { type: Number, required: true, trim: true },
         pactada: { type: Number, required: true, trim: true },

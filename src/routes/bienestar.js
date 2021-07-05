@@ -9,6 +9,8 @@ router.use(verificarToken);
 
 router.route('/encuestas/')
     .get(controlador.obtenerEncuestas)
+router.route('/mis-encuestas/')
+    .post(controlador.obtenerMisEncuestas)
 router.route('/encuestas/:id')
     .get(controlador.obtenerEncuesta)
 router.route('/encuestas/create/')
@@ -25,7 +27,7 @@ router.route('/encuestas/ver-resultado/:id')
 
 router.route('/soporte/')
     .get(controlador.obtenerConsultas)
-router.route('/soporte/:id')
+router.route('/soporte/:rut')
     .get(controlador.obtenerMisConsultas)
 router.route('/soporte/consultas/:id')
     .get(controlador.obtenerDetalleConsulta)
@@ -33,7 +35,7 @@ router.route('/soporte/consulta/crear')
     .post(controlador.crearConsulta)
 router.route('/soporte/consulta/responder')
     .post(controlador.responderConsulta)
-    router.route('/soporte/consulta/finalizar')
+router.route('/soporte/consulta/finalizar')
     .post(controlador.finalizarConsulta)
 
 module.exports = router;

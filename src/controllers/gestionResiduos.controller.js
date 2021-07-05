@@ -8,6 +8,7 @@ const trazabilidades = require("../models/trazabilidad");
 const planesmanejos = require("../models/planManejo");
 const emergenciasResiduos = require("../models/emergenciasResiduos");
 const Mongoose = require("mongoose");
+const ordenRetiro = require("../models/ordenRetiro");
 
 //funciones ordenes retiro
 
@@ -104,15 +105,17 @@ controlador.crearRetiro =
                 console.log(orden.fecha);
                 var fechaOrden = new Date(orden.fecha);
                 var numOrden = await orden.or;
-                var nuevoRetiro = await new retiros({ centro, clienterut, direccion, comuna, codigoler, categoria, fecha: fechaOrden, inicio, termino, estado: 0, or: numOrden });
-                await nuevoRetiro.save().then(prom => {
-                    console.log(prom);
-                    ordenesRetiro.findOneAndUpdate({ "idor": orden.or }, { "estado": 1 }).then(asd => {
-                        // console.log(asd);
-                    })
-                }).catch(err => {
-                    console.log(err);
-                });
+                if (numOrden) {
+                    var nuevoRetiro = await new retiros({ centro, clienterut, direccion, comuna, codigoler, categoria, fecha: fechaOrden, inicio, termino, estado: 0, or: numOrden });
+                    await nuevoRetiro.save().then(prom => {
+                        console.log(prom);
+                        ordenesRetiro.findOneAndUpdate({ "idor": orden.or }, { "estado": 1 }).then(asd => {
+                            // console.log(asd);
+                        })
+                    }).catch(err => {
+                        console.log(err);
+                    });
+                }
             }
             res.json({ estado: "success", mensaje: "Programacion de retiro ingresado exitosamente" });
         } else {
@@ -283,10 +286,11 @@ controlador.crearRuta =
                 retiros.findOneAndUpdate({ "_id": retiro.retiro }, { "estado": 1 }).then(asd => {
                     console.log(asd);
                 })
-                ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id }).then(asd => {
+                ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id, estado: 2 }).then(asd => {
                     console.log(asd);
                 })
             }
+            res.json({ estado: "success", mensaje: "Ruta creada correctamente" });
         }).catch(err => {
             console.log(err);
         });
@@ -313,7 +317,7 @@ controlador.modificarRuta =
                 retiros.findOneAndUpdate({ "_id": retiro.retiro }, { "estado": 1 }).then(asd => {
                     console.log(asd);
                 })
-                ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id }).then(asd => {
+                ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id, estado:2 }).then(asd => {
                     console.log(asd);
                 })
             }
@@ -559,7 +563,9 @@ controlador.trazabilidadEtapaUno =
         const nuevoTrazabilidad = { idor, pesoPrimer, nombreEntrega, rutEntrega, tipoTarjeta, comentarios, archivos: direcciones }; // creamos un objeto usuario con los datos recibidos
         await trazabilidades.findOneAndUpdate({ "idor": req.body.idor }, nuevoTrazabilidad, { upsert: true })
             .then(prom => {
-                res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, {estado: 3} ).then(prom2 => {
+                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                })
             }).catch(err => {
                 console.log(err);
                 // if (err.code === 11000) {
@@ -575,7 +581,9 @@ controlador.trazabilidadEtapaDos =
         const nuevoTrazabilidad = { idor, pesoSegundo, sacas, planificacion, codigo }; // creamos un objeto usuario con los datos recibidos
         await trazabilidades.findOneAndUpdate({ "idor": req.body.idor }, nuevoTrazabilidad, { upsert: true })
             .then(prom => {
-                res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, {estado: 4} ).then(prom2 => {
+                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                })
             }).catch(err => {
                 console.log(err);
                 // if (err.code === 11000) {
@@ -586,7 +594,7 @@ controlador.trazabilidadEtapaDos =
 controlador.trazabilidadEtapaTres =
     async (req, res) => {
         console.log(req.body);
-        var {idor, residuos } = req.body;
+        var { idor, residuos } = req.body;
         var insertResiduos = [];
         for await (residuo of residuos) {
             let datos = {
@@ -599,10 +607,12 @@ controlador.trazabilidadEtapaTres =
             insertResiduos.push(datos);
         }
         console.log(insertResiduos);
-        const nuevoTrazabilidad = { residuos:insertResiduos }; // creamos un objeto usuario con los datos recibidos
+        const nuevoTrazabilidad = { residuos: insertResiduos }; // creamos un objeto usuario con los datos recibidos
         await trazabilidades.findOneAndUpdate({ "idor": req.body.idor }, nuevoTrazabilidad, { upsert: true })
             .then(prom => {
-                res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, {estado: 5} ).then(prom2 => {
+                    res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
+                })
             }).catch(err => {
                 console.log(err);
                 // if (err.code === 11000) {
@@ -783,7 +793,7 @@ controlador.modificarPlanManejo =
         await planesmanejos.findOneAndUpdate({ "_id": req.body._id }, nuevoPlan).then(prom => {
             console.log(prom);
             console.log(prom._id);
-            if (archivosrec) {  
+            if (archivosrec) {
                 arrayArchivos.forEach(archivo => {
                     var file = archivo[1];
                     var separado = file.name.split(".");

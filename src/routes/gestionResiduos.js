@@ -32,7 +32,7 @@ router.route('/retiros/obtener/:id')
     .get(controlador.obtenerRetiro)
 
 router.route('/retirosnoasignados/')
-    .get(controlador.obtenerRetirosNoAsignados)
+    .post(controlador.obtenerRetirosNoAsignados)
 router.route('/retirosnoasignados/:fecha')
     .get(controlador.obtenerRetirosNoAsignados)
 

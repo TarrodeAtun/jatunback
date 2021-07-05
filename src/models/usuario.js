@@ -18,7 +18,9 @@ const usuario = new Schema(
         cargo: { type: Number, required: true },
         perfilSec: { type: Number, required: true },
         activo: { type: Number},
-        recuperacion: { type: String}
+        recuperacion: { type: String},
+        centroCosto: { type: Number},
+        imagen: { type: Object}
     },
     { timestamps: true }
 );
