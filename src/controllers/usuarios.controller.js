@@ -45,6 +45,18 @@ controlador.ingresarUsuario =
             rut = rut.replace(".", "");
         }
 
+        //comprobamos que el rut usuario no exista
+        usuario.find({ rut: rut }).then(prom => {
+            if (prom.length > 0) {
+                res.json({ estado: "warning", mensaje: "Ya existe un usuario con ese rut" });
+            }
+        });
+
+        usuario.find({ email: email }).then(prom => {
+            if (prom.length > 0) {
+                res.json({ estado: "warning", mensaje: "Ya existe un usuario con ese email" });
+            }
+        });
         let dv = rutArray[1];
         var archivosrec = req.files;
         var arrayArchivos = [];
@@ -97,6 +109,7 @@ controlador.obtenerUsuario =
 
 controlador.actualizaUsuario =
     async (req, res) => {
+        console.log(req.body.fechaNac);
         var { id, rut, nombre, apellido, fechaNac, email, telefono, hijos, perfil, perfilSec, cargo, centroCosto } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
         var emergencias = JSON.parse(req.body.emergencias);
         var bancarios = JSON.parse(req.body.bancarios);
@@ -108,13 +121,27 @@ controlador.actualizaUsuario =
             rut = rut.replace(".", "");
         }
         let dv = rutArray[1];
-
+        if (parseInt(rut) !== parseInt(req.body.rutOriginal)) {
+            usuario.find({ rut: rut }).then(prom => {
+                if (prom.length > 0) {
+                    res.json({ estado: "warning", mensaje: "Ya existe un usuario con ese rut" });
+                }
+            });
+        }
+        if (email !== req.body.emailOriginal) {
+            usuario.find({ email: email }).then(prom => {
+                if (prom.length > 0) {
+                    res.json({ estado: "warning", mensaje: "Ya existe un usuario con ese email" });
+                }
+            });
+        }
         var archivosrec = req.files;
         var arrayArchivos = [];
         if (archivosrec) {
             arrayArchivos = Object.entries(archivosrec);
         }
         var direcciones = [];
+        usuario.find()
         const nuevoUsuario = { rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios, centroCosto }; //creamos un array usuario con los datos nuevos
         await usuario.findOneAndUpdate({ _id: id }, nuevoUsuario).then(async prom => { //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
             if (arrayArchivos.length > 0) {
@@ -226,7 +253,7 @@ controlador.todosTrabajadoresPost =
     async (req, res) => {
         var match = {};
         if (req.body.cargo) {
-            match["cargo"] = 2;
+            match["cargo"] = parseInt(req.body.cargo);
         }
         if (req.body.rut) {
             let rutArray = req.body.rut.split("-");
@@ -262,8 +289,6 @@ controlador.todosTrabajadoresPost =
                 console.log(paginas);
                 res.json({ ok: true, data: resp, paginas: paginas });
             });
-            // console.log(resp);
-            
         });
     }
 
@@ -271,6 +296,16 @@ controlador.todosJefes =
     async (req, res) => {
         await usuario.aggregate([
             { $match: { cargo: "1" } },
+            { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
+        ]).then(resp => {
+            console.log(resp);
+            res.json({ ok: true, data: resp });
+        });
+    }
+controlador.todosConductores =
+    async (req, res) => {
+        await usuario.aggregate([
+            { $match: { cargo: 3 } },
             { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
         ]).then(resp => {
             console.log(resp);

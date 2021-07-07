@@ -19,6 +19,8 @@ router.route('/worker/trabajadoresPost')
     .post(controlador.todosTrabajadoresPost)
 router.route('/worker/obtenerjefes')
     .get(controlador.todosJefes)
+router.route('/worker/conductores')
+    .get(controlador.todosConductores)
 
 router.route('/worker/:id')
     .get(controlador.obtenerUsuario)
@@ -139,9 +141,6 @@ router.route('/worker/turnos/subirAsistencia')
 router.route('/worker/turnos/finalizar')
     .post(controlador.finalizarTurno)
 
-
-router.route('/conductores')
-    .get(controlador.todosUsuarios)  //reemplazar por listado de conductores
 
 
 module.exports = router;

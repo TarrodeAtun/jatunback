@@ -7,15 +7,38 @@ const rutas = require("../models/ruta");
 const trazabilidades = require("../models/trazabilidad");
 const planesmanejos = require("../models/planManejo");
 const emergenciasResiduos = require("../models/emergenciasResiduos");
+const emergenciasVehiculos = require("../models/emergenciasVehiculos");
 const Mongoose = require("mongoose");
 const ordenRetiro = require("../models/ordenRetiro");
+const tamañoPag = 3;
 
 //funciones ordenes retiro
 
 controlador.obtenerOrdenes =
     async (req, res) => {
-
+        console.log(req.body);
+        var match = {};
+        if (req.body.tarjeta) {
+            match["tarjeta"] = parseInt(req.body.tarjeta)
+        }
+        if (req.body.fecha) {
+            let fecha = new Date(req.body.fecha);
+            console.log(fecha);
+            match["fecha"] = fecha;
+        }
+        if (req.body.centro) {
+            match["centro"] = parseInt(req.body.centro)
+        }
+        if (req.body.estado) {
+            match["estado"] = parseInt(req.body.estado)
+        }
+        var page = 1;
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        const skip = (page - 1) * tamañoPag;
         await ordenesRetiro.aggregate([
+            { $match: match },
             {
                 $lookup: {
                     from: 'centrocostos',
@@ -27,16 +50,34 @@ controlador.obtenerOrdenes =
                     as: 'datosCentro'
                 }
             },
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag },
             { $sort: { "idor": -1 } }
         ]).then(resp => {
-            console.log(resp);
-            res.json({ ok: true, data: resp });
+            ordenesRetiro.aggregate([
+                { $match: match },
+                { $count: "registros" }
+            ]).then(re => {
+                let registros = re[0].registros;
+                paginas = Math.ceil(registros / tamañoPag)
+                console.log(paginas);
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
         });
     }
 controlador.ordenesNoAsignadas =
     async (req, res) => {
         await ordenesRetiro.aggregate([
             { $match: { estado: 0 } },
+            { $sort: { "idor": -1 } }
+        ]).then(resp => {
+            res.json({ ok: true, data: resp });
+        });
+    }
+controlador.ordenesIniciadas =
+    async (req, res) => {
+        await ordenesRetiro.aggregate([
+            { $match: { estado: { $gte: 2, $lte: 5 } } },
             { $sort: { "idor": -1 } }
         ]).then(resp => {
             res.json({ ok: true, data: resp });
@@ -69,15 +110,20 @@ controlador.obtenerOrden =
 
 controlador.modificarOrden =
     async (req, res) => {
-        console.log(":D");
-        console.log(req.body);
         var { centro, retiro, tarjeta, clienterut, contactoNombre, contactoEmail, direccion, comuna, establecimientoID, vuretc, detalle } = req.body;
         const nuevaOrden = { centro, retiro, tarjeta, clienterut, contactoNombre, contactoEmail, direccion, comuna, establecimientoID, vuretc, detalle, estado: 0 };
         await ordenesRetiro.findOneAndUpdate({ "_id": req.body.id }, nuevaOrden, { upsert: true }).then(prom => {
-            console.log(prom);
             res.json({ estado: "success", mensaje: "Orden modificada exitosamente" });
         }).catch(err => {
-            // console.log(err);
+            res.json({ estado: "error", err: err });
+        });
+    }
+controlador.anularOrden =
+    async (req, res) => {
+        var { id } = req.body;
+        await ordenesRetiro.findOneAndUpdate({ "_id": req.body.id }, { estado: 6 }, { upsert: true }).then(prom => {
+            res.json({ estado: "success", mensaje: "Orden anulada exitosamente" });
+        }).catch(err => {
             res.json({ estado: "error", err: err });
         });
     }
@@ -98,11 +144,9 @@ async function getSequenceNextValue(seqName) {
 controlador.crearRetiro =
     async (req, res) => {
         var ordenes = req.body.or;
-        console.log(ordenes);
         var { centro, clienterut, direccion, comuna, codigoler, categoria, fecha, inicio, termino } = req.body;
         if (ordenes) {
             for (orden of ordenes) {
-                console.log(orden.fecha);
                 var fechaOrden = new Date(orden.fecha);
                 var numOrden = await orden.or;
                 if (numOrden) {
@@ -110,7 +154,6 @@ controlador.crearRetiro =
                     await nuevoRetiro.save().then(prom => {
                         console.log(prom);
                         ordenesRetiro.findOneAndUpdate({ "idor": orden.or }, { "estado": 1 }).then(asd => {
-                            // console.log(asd);
                         })
                     }).catch(err => {
                         console.log(err);
@@ -136,20 +179,19 @@ controlador.crearRetiro =
 controlador.obtenerRetiros =
     async (req, res) => {
         var today;
-        if (req.params.fecha) {
-            console.log(req.params.fecha);
-            var today = new Date(req.params.fecha);
+        let match = {};
+        if (req.body.fecha) {
+            var today = new Date(req.body.fecha);
         } else {
             today = new Date();
         }
-        console.log(today);
-        // var nextweek = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 7);
-        // // console.log(nextweek);
         var firstday = new Date(today.setDate(today.getDate() - today.getDay()));
         var lastday = new Date(today.setDate(today.getDate() - today.getDay() + 6));
-        console.log(firstday, lastday);
+        if (req.body.estado) {
+            match["datosOR.estado"] = parseInt(req.body.estado);
+        }
+        match["fecha"] = { $gte: firstday, $lte: lastday };
         const registros = retiros.aggregate([
-            { $match: { fecha: { $gte: firstday, $lte: lastday } } },
             {
                 $lookup: {
                     from: 'centrocostos',
@@ -172,25 +214,32 @@ controlador.obtenerRetiros =
                     as: 'datosCliente'
                 }
             },
+            {
+                $lookup: {
+                    from: 'ordenesretiros',
+                    localField: 'or',
+                    foreignField: 'idor',
+                    as: 'datosOR'
+                }
+            },
+            { $unwind: "$datosOR" },
+            { $match: match },
             { $sort: { "fecha": 1 } }
         ]).then(resp => {
-            // console.log(resp);
+            console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
 
 controlador.obtenerRetiro =
     async (req, res) => {
-        console.log(req.params);
-        const registros = await retiros.findOne({ _id: req.params.id }).then(resp => {
+        await retiros.findOne({ _id: req.params.id }).then(resp => {
             res.json({ ok: true, data: resp });
         });
     }
 
 controlador.modificarRetiro =
     async (req, res) => {
-        console.log(req.body);
-        console.log("modificando")
         var { centro, clienterut, direccion, comuna, codigoler, categoria, fecha, inicio, termino, or, ordenActual } = req.body;
         const nuevoRetiro = { centro, clienterut, direccion, comuna, codigoler, categoria, fecha, inicio, termino, or };
         await retiros.findOneAndUpdate({ "_id": req.body.id }, nuevoRetiro).then(async prom => {
@@ -208,7 +257,6 @@ controlador.modificarRetiro =
 controlador.obtenerRetirosNoAsignados =
     async (req, res) => {
         var fecha = new Date(req.params.fecha);
-        console.log(fecha);
         await retiros.aggregate([
             { $match: { estado: 0, fecha: fecha } },
             {
@@ -224,7 +272,6 @@ controlador.obtenerRetirosNoAsignados =
             },
             { $sort: { "fecha": 1 } }
         ]).then(resp => {
-            console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
@@ -232,17 +279,26 @@ controlador.obtenerRetirosNoAsignados =
 controlador.obtenerRutas =
     async (req, res) => {
         var today;
-        if (req.params.fecha) {
-            console.log(req.params.fecha);
-            var today = new Date(req.params.fecha);
+        let match = {};
+        if (req.body.fecha) {
+            var today = new Date(req.body.fecha);
         } else {
             today = new Date();
         }
-        console.log(today);
+        if (req.body.conductor) {
+            match["conductorRut"] = parseInt(req.body.conductor);
+        }
+        if (req.body.patente) {
+            match["patente"] = req.body.patente;
+        }
+        if (req.body.conductor) {
+            match["ordenes"] = { $elemMatch: { or: req.body.or } };
+        }
         var firstday = new Date(today.setDate(today.getDate() - today.getDay() + 1));
         var lastday = new Date(today.setDate(today.getDate() - today.getDay() + 7));
+        match["fecha"] = { $gte: firstday, $lte: lastday };
         const registros = rutas.aggregate([
-            { $match: { fecha: { $gte: firstday, $lte: lastday } } },
+            { $match: match },
             {
                 $lookup: {
                     from: 'centrocostos',
@@ -267,28 +323,20 @@ controlador.obtenerRutas =
             },
             { $sort: { "fecha": 1 } }
         ]).then(resp => {
-            console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
-
-
-
 controlador.crearRuta =
     async (req, res) => {
         var ordenes = req.body.ordenes;
-        console.log(ordenes);
         var { patente, servicio, conductor, fecha, inicio, termino, enlace } = req.body;
         var nuevaRuta = await new rutas({ patente, servicio, conductorRut: conductor, fecha, ordenes, inicio, termino, enlace });
         await nuevaRuta.save().then(prom => {
-            console.log(prom);
             for (retiro of ordenes) {
                 retiros.findOneAndUpdate({ "_id": retiro.retiro }, { "estado": 1 }).then(asd => {
-                    console.log(asd);
-                })
+                });
                 ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id, estado: 2 }).then(asd => {
-                    console.log(asd);
-                })
+                });
             }
             res.json({ estado: "success", mensaje: "Ruta creada correctamente" });
         }).catch(err => {
@@ -299,9 +347,11 @@ controlador.crearRuta =
 controlador.modificarRuta =
     async (req, res) => {
         var ordenes = req.body.ordenes;
-        console.log(ordenes);
         var { patente, servicio, conductor, fecha, inicio, termino, enlace } = req.body;
         var nuevaRuta = { patente, servicio, conductorRut: conductor, fecha, ordenes, inicio, termino, enlace };
+        await ordenesRetiro.findOneAndUpdate({ "ruta": req.body.id }, { "ruta": "", estado: 1 }).then(asd => { //buscamos las or que estaban enlazadas a la ruta y las reinicializamos
+
+        });
         await rutas.findOneAndUpdate({ "_id": req.body.id }, { "estado": 1 }).then(resp => {
             for (retiro of resp.ordenes) {
                 retiros.findOneAndUpdate({ "_id": retiro.retiro }, { "estado": 0 }).then(asd => {
@@ -312,15 +362,13 @@ controlador.modificarRuta =
             console.log(err);
         });
         await rutas.findOneAndUpdate({ "_id": req.body.id }, nuevaRuta).then(prom => {
-            console.log(prom);
-            for (retiro of ordenes) {
-                retiros.findOneAndUpdate({ "_id": retiro.retiro }, { "estado": 1 }).then(asd => {
-                    console.log(asd);
-                })
-                ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id, estado:2 }).then(asd => {
-                    console.log(asd);
-                })
+            for (retiro of ordenes) { //por cada orden de retiro
+                retiros.findOneAndUpdate({ "_id": retiro.retiro }, { "estado": 1 }).then(asd => { //cambiamos el estado del retiro;
+                });
+                ordenesRetiro.findOneAndUpdate({ "idor": retiro.or }, { "ruta": prom._id, estado: 2 }).then(asd => { //cambiamos el estado de la nueva or;
+                });
             }
+            res.json({ ok: true, estado: "success", mensaje: "Ruta modificada exitosamente" });
         }).catch(err => {
             console.log(err);
         });
@@ -328,28 +376,49 @@ controlador.modificarRuta =
 
 controlador.obtenerRuta =
     async (req, res) => {
-        console.log(req.params);
-        const registros = await rutas.findOne({ _id: req.params.id }).then(resp => {
-            console.log(resp);
+        await rutas.aggregate([
+            { $match: { _id: Mongoose.Types.ObjectId(req.params.id) } },
+            {
+                $lookup: {
+                    from: 'usuarios',
+                    let: { "conductorRut": "$conductorRut" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$rut", "$$conductorRut"] } } },
+                        { "$project": { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
+                    ],
+                    as: 'datosConductor'
+                }
+            }
+        ]).then(resp => {
             res.json({ ok: true, data: resp });
         });
     }
-
 controlador.obtenerOrdenesRuta =
     async (req, res) => {
-        var fecha = new Date(req.params.fecha);
+        var fecha;
+        let match = {};
+        if (req.body.fecha) {
+            var fecha = new Date(req.body.fecha);
+        } else {
+            fecha = new Date();
+        }
         var firstday = new Date(fecha.setDate(fecha.getDate() - fecha.getDay()));
         var lastday = new Date(fecha.setDate(fecha.getDate() - fecha.getDay() + 6));
+        if (req.body.conductor) {
+            match["conductorRut"] = parseInt(req.body.conductor);
+        }
+        if (req.body.patente) {
+            match["datosRuta.patente"] = req.body.patente;
+        }
+        if (req.body.or) {
+            match["idor"] = parseInt(req.body.or);
+        }
+        match["ruta"] = {
+            "$exists": true,
+            "$ne": null // $ne = not empty
+        }
+        match["retiro"] = { $gte: firstday, $lte: lastday }
         await ordenesRetiro.aggregate([
-            {
-                $match: {
-                    ruta: {
-                        "$exists": true,
-                        "$ne": null // $ne = not empty
-                    },
-                    retiro: { $gte: firstday, $lte: lastday }
-                }
-            },
             {
                 $lookup: {
                     from: 'rutas',
@@ -399,10 +468,10 @@ controlador.obtenerOrdenesRuta =
                     as: 'datosCentro'
                 }
             },
+            { $unwind: "$datosRuta" },
+            { $match: match },
             { $sort: { "idor": -1 } }
         ]).then(resp => {
-            resp.prueba = "caca";
-            console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
@@ -442,7 +511,6 @@ controlador.obtenerOrdenesTrazabilidad =
             },
             { $sort: { "idor": -1 } }
         ]).then(resp => {
-            console.log(resp);
             res.json({ ok: true, data: resp });
         });
     }
@@ -532,7 +600,6 @@ controlador.obtenerOrdenTrazabilidad =
             },
             { $sort: { "idor": -1 } }
         ]).then(resp => {
-            console.log(resp);
             res.json({ ok: true, data: resp[0] });
         });
     }
@@ -563,37 +630,28 @@ controlador.trazabilidadEtapaUno =
         const nuevoTrazabilidad = { idor, pesoPrimer, nombreEntrega, rutEntrega, tipoTarjeta, comentarios, archivos: direcciones }; // creamos un objeto usuario con los datos recibidos
         await trazabilidades.findOneAndUpdate({ "idor": req.body.idor }, nuevoTrazabilidad, { upsert: true })
             .then(prom => {
-                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, {estado: 3} ).then(prom2 => {
+                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, { estado: 3 }).then(prom2 => {
                     res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
                 })
             }).catch(err => {
                 console.log(err);
-                // if (err.code === 11000) {
-                //     res.json({ estado: "warning", mensaje: "¡El rut ingresado ya existe!" });
-                // }
             });
-
     }
 controlador.trazabilidadEtapaDos =
     async (req, res) => {
-        console.log(req.body);
         var { idor, pesoSegundo, sacas, planificacion, codigo } = req.body;
         const nuevoTrazabilidad = { idor, pesoSegundo, sacas, planificacion, codigo }; // creamos un objeto usuario con los datos recibidos
         await trazabilidades.findOneAndUpdate({ "idor": req.body.idor }, nuevoTrazabilidad, { upsert: true })
             .then(prom => {
-                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, {estado: 4} ).then(prom2 => {
+                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, { estado: 4 }).then(prom2 => {
                     res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
                 })
             }).catch(err => {
                 console.log(err);
-                // if (err.code === 11000) {
-                //     res.json({ estado: "warning", mensaje: "¡El rut ingresado ya existe!" });
-                // }
             });
     }
 controlador.trazabilidadEtapaTres =
     async (req, res) => {
-        console.log(req.body);
         var { idor, residuos } = req.body;
         var insertResiduos = [];
         for await (residuo of residuos) {
@@ -606,18 +664,14 @@ controlador.trazabilidadEtapaTres =
             }
             insertResiduos.push(datos);
         }
-        console.log(insertResiduos);
         const nuevoTrazabilidad = { residuos: insertResiduos }; // creamos un objeto usuario con los datos recibidos
         await trazabilidades.findOneAndUpdate({ "idor": req.body.idor }, nuevoTrazabilidad, { upsert: true })
             .then(prom => {
-                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, {estado: 5} ).then(prom2 => {
+                ordenRetiro.findOneAndUpdate({ "idor": req.body.idor }, { estado: 5 }).then(prom2 => {
                     res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
                 })
             }).catch(err => {
                 console.log(err);
-                // if (err.code === 11000) {
-                //     res.json({ estado: "warning", mensaje: "¡El rut ingresado ya existe!" });
-                // }
             });
     }
 
@@ -628,7 +682,6 @@ controlador.obtenerPlanesManejo =
     }
 controlador.obtenerPlanManejo =
     async (req, res) => {
-        console.log(req.params);
         await planesmanejos.aggregate([
             {
                 $match: { "_id": Mongoose.Types.ObjectId(req.params.id) }
@@ -702,10 +755,7 @@ controlador.obtenerPlanManejo =
                     }
                 }
             },
-
-
         ]).then(resp => {
-            console.log(resp);
             res.json({ ok: true, data: resp });
         });
         // const registros = await planesmanejos.findOne({ "_id": req.params.id }); //consultamos todos los registros de la tabla usuarios y lo almacenamos
@@ -716,12 +766,10 @@ controlador.crearPlanManejo =
     async (req, res) => {
         var residuos = JSON.parse(req.body.residuos);
         var { clienteRut, nombre, centro, direccion, comuna, id, vuretc, recoleccion, valorizacion, techadoAltura, techadoSuperficie, superficie, comentarios, contenedores, residuosegregado } = req.body;
-        console.log(residuos);
         var archivosrec = req.files;
         var arrayArchivos = Object.entries(archivosrec);
         var direcciones = [];
         var fecha = new Date();
-
         var insertResiduos = [];
         for (residuo of residuos) {
             let datos = {
@@ -735,8 +783,6 @@ controlador.crearPlanManejo =
             }
             insertResiduos.push(datos);
         }
-        console.log(insertResiduos);
-
         var nuevoPlan = await new planesmanejos({ clienteRut, nombre, fecha, centro, direccion, comuna, id, vuretc, recoleccion, valorizacion, residuos: insertResiduos, techadoAltura, techadoSuperficie, superficie, comentarios, contenedores, residuosegregado, estado: 0 });
         await nuevoPlan.save().then(prom => {
             arrayArchivos.forEach(archivo => {
@@ -756,16 +802,13 @@ controlador.crearPlanManejo =
                     }
                 });
             });
-
             planesmanejos.findOneAndUpdate({ "_id": prom._id }, { "imagen": direcciones }).then(asd => {
                 res.json({ estado: "success", mensaje: "Datos ingresados correctamente" });
             })
         }).catch(err => {
             console.log(err);
         });
-
     }
-
 controlador.modificarPlanManejo =
     async (req, res) => {
         var residuos = JSON.parse(req.body.residuos);
@@ -791,8 +834,6 @@ controlador.modificarPlanManejo =
         }
         var nuevoPlan = await { clienteRut, nombre, fecha, centro, direccion, comuna, id, vuretc, recoleccion, valorizacion, residuos: insertResiduos, techadoAltura, techadoSuperficie, superficie, comentarios, contenedores, residuosegregado, estado: 0 };
         await planesmanejos.findOneAndUpdate({ "_id": req.body._id }, nuevoPlan).then(prom => {
-            console.log(prom);
-            console.log(prom._id);
             if (archivosrec) {
                 arrayArchivos.forEach(archivo => {
                     var file = archivo[1];
@@ -822,31 +863,39 @@ controlador.modificarPlanManejo =
         });
 
     }
-
-
 controlador.finalizarPlanManejo =
     async (req, res) => {
         console.log(req.body);
 
     }
 
-
-
 controlador.obtenerEmergenciasResiduos =
     async (req, res) => {
-        const registros = await emergenciasResiduos.find(); //consultamos todos los registros de la tabla usuarios y lo almacenamos
-        res.json({ ok: true, data: registros });
+        var page = 1;
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        const skip = (page - 1) * tamañoPag;
+        await emergenciasResiduos.aggregate([
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag },
+            { $sort: { "idor": -1 } }
+        ]).then(resp => {
+            emergenciasResiduos.aggregate([
+                { $count: "registros" }
+            ]).then(re => {
+                let registros = re[0].registros;
+                let paginas = Math.ceil(registros / tamañoPag)
+                console.log(paginas);
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
+        });
     }
 controlador.obtenerEmergenciaResiduo =
     async (req, res) => {
         console.log(req.params);
         const registros = await emergenciasResiduos.findOne({ "_id": req.params.id }); //consultamos todos los registros de la tabla usuarios y lo almacenamos
         res.json({ ok: true, data: registros });
-    }
-controlador.obtenerEmergenciasVehiculos =
-    async (req, res) => {
-        console.log(req.body);
-
     }
 controlador.crearEmergenciasResiduos =
     async (req, res) => {
@@ -856,7 +905,6 @@ controlador.crearEmergenciasResiduos =
         var arrayArchivos = Object.entries(archivosrec);
         var direcciones = [];
         var fecha = new Date();
-
         var insertInvolucrados = [];
         for (involucrado of involucrados) {
             let datos = {
@@ -867,10 +915,53 @@ controlador.crearEmergenciasResiduos =
             }
             insertInvolucrados.push(datos);
         }
-        console.log(insertInvolucrados);
+        var emergencia = await new emergenciasResiduos({ fecha, hora, turno, hito, involucrados: insertInvolucrados });
+        await emergencia.save().then(prom => {
+            arrayArchivos.forEach(archivo => {
+                var file = archivo[1];
+                var separado = file.name.split(".");
+                var formato = separado[1];
+                uploadPath = './uploads/emergencias/residuos/' + prom._id + "/" + archivo[0] + "." + formato;
+                var bdData = {
+                    "input": archivo[0],
+                    "url": "/emergencias/residuos/" + prom._id + "/" + archivo[0] + "." + formato
+                }
+                direcciones.push(bdData)
+                file.mv(uploadPath, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                });
+            });
+            emergenciasResiduos.findOneAndUpdate({ "_id": prom._id }, { "imagen": direcciones }).then(asd => {
+                console.log(asd);
+            });
+            res.json({ mensaje: "Emergencia creada exitosamente", estado: "success" });
+        }).catch(err => {
+            console.log(err);
+        });
 
-        var nuevoPlan = await new emergenciasResiduos({ fecha, hora, turno, hito, involucrados: insertInvolucrados });
-        await nuevoPlan.save().then(prom => {
+    }
+controlador.modificarEmergenciasResiduos =
+    async (req, res) => {
+        var involucrados = JSON.parse(req.body.involucrados);
+        var { fecha, hora, turno, hito } = req.body;
+        var archivosrec = req.files;
+        var arrayArchivos = Object.entries(archivosrec);
+        var direcciones = [];
+        var fecha = new Date();
+        var insertInvolucrados = [];
+        for (involucrado of involucrados) {
+            let datos = {
+                "rut": involucrado.rut,
+                "dv": involucrado.dv,
+                "nombre": involucrado.nombre,
+                "apellido": involucrado.apellido
+            }
+            insertInvolucrados.push(datos);
+        }
+        var emergencia = { fecha, hora, turno, hito, involucrados: insertInvolucrados };
+        await emergenciasResiduos.findOneAndUpdate({ id: req.body.id }, { emergencia }).then(prom => {
             arrayArchivos.forEach(archivo => {
                 var file = archivo[1];
                 var separado = file.name.split(".");
@@ -895,10 +986,157 @@ controlador.crearEmergenciasResiduos =
         });
 
     }
+controlador.eliminarEmergenciasResiduos =
+    async (req, res) => {
+        await emergenciasResiduos.findOneAndDelete({ _id: req.body.id });
+        res.json({ mensaje: "Emergencia eliminada exitosamente", status: 'eliminado', estado: "success" });
+    }
+
+
+
+
+
+controlador.obtenerEmergenciasVehiculos =
+    async (req, res) => {
+        var page = 1;
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        var paginas = 1;
+        const skip = (page - 1) * tamañoPag;
+        await emergenciasVehiculos.aggregate([
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag },
+            {
+                $lookup: {
+                    from: 'usuarios',
+                    let: { "conductor": "$conductor" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$rut", "$$conductor"] } } },
+                        { "$project": { "rut": 1, "dv": 1, "nombre": 1, "apellido": 1 } }
+                    ],
+                    as: 'datosConductor'
+                }
+            },
+            { $unwind: "$datosConductor" },
+            { $sort: { "idor": -1 } }
+        ]).then(resp => {
+            emergenciasVehiculos.aggregate([
+                { $count: "registros" },
+                { $unwind: "$registros" }
+            ]).then(re => {
+                if (re) {
+                    let registros = re[0].registros;
+                    paginas = Math.ceil(registros / tamañoPag)
+                    console.log(paginas);
+                }
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
+        });
+    }
+controlador.obtenerEmergenciaVehiculo =
+    async (req, res) => {
+        console.log(req.params);
+        const registros = await emergenciasVehiculos.aggregate([
+            { $match: { _id: Mongoose.Types.ObjectId(req.params.id) } },
+            {
+                $lookup: {
+                    from: 'usuarios',
+                    let: { "conductor": "$conductor" },
+                    pipeline: [
+                        { "$match": { "$expr": { "$eq": ["$rut", "$$conductor"] } } },
+                        { "$project": { "rut": 1, "dv": 1, "nombre": 1, "apellido": 1 } }
+                    ],
+                    as: 'datosConductor'
+                }
+            },
+            { $unwind: "$datosConductor" }
+        ]).then(resp => {
+            res.json({ ok: true, data: resp });
+        }); 
+    }
 controlador.crearEmergenciasVehiculos =
     async (req, res) => {
-        console.log(req.body);
 
+        var { fecha, patente, conductor, hora, turno, hito } = req.body;
+        var archivosrec = req.files;
+        var arrayArchivos = Object.entries(archivosrec);
+        var direcciones = [];
+        fecha = new Date(fecha);
+        var emergencia = await new emergenciasVehiculos({ fecha, hora, patente, hito, conductor });
+        await emergencia.save().then(prom => {
+            arrayArchivos.forEach(archivo => {
+                var file = archivo[1];
+                var separado = file.name.split(".");
+                var formato = separado[1];
+                uploadPath = './uploads/emergencias/residuos/' + prom._id + "/" + archivo[0] + "." + formato;
+                var bdData = {
+                    "input": archivo[0],
+                    "url": "/emergencias/residuos/" + prom._id + "/" + archivo[0] + "." + formato
+                }
+                direcciones.push(bdData)
+                file.mv(uploadPath, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                });
+            });
+            emergenciasVehiculos.findOneAndUpdate({ "_id": prom._id }, { "imagen": direcciones }).then(asd => {
+                console.log(asd);
+            });
+            res.json({ mensaje: "Emergencia creada exitosamente", estado: "success" });
+        }).catch(err => {
+            console.log(err);
+        });
+    }
+controlador.modificarEmergenciasVehiculos =
+    async (req, res) => {
+        var involucrados = JSON.parse(req.body.involucrados);
+        var { fecha, hora, turno, hito } = req.body;
+        var archivosrec = req.files;
+        var arrayArchivos = Object.entries(archivosrec);
+        var direcciones = [];
+        var fecha = new Date();
+        var insertInvolucrados = [];
+        for (involucrado of involucrados) {
+            let datos = {
+                "rut": involucrado.rut,
+                "dv": involucrado.dv,
+                "nombre": involucrado.nombre,
+                "apellido": involucrado.apellido
+            }
+            insertInvolucrados.push(datos);
+        }
+        var emergencia = await new emergenciasResiduos({ fecha, hora, turno, hito, involucrados: insertInvolucrados });
+        await emergencia.findOneAndUpdate({ id: req.body.id }).then(prom => {
+            arrayArchivos.forEach(archivo => {
+                var file = archivo[1];
+                var separado = file.name.split(".");
+                var formato = separado[1];
+                uploadPath = './uploads/emergencias/residuos/' + prom._id + "/" + archivo[0] + "." + formato;
+                var bdData = {
+                    "input": archivo[0],
+                    "url": "/emergencias/residuos/" + prom._id + "/" + archivo[0] + "." + formato
+                }
+                direcciones.push(bdData)
+                file.mv(uploadPath, function (err) {
+                    if (err) {
+                        console.log(err);
+                    }
+                });
+            });
+            emergenciasResiduos.findOneAndUpdate({ "_id": prom._id }, { "imagen": direcciones }).then(asd => {
+                console.log(asd);
+            })
+        }).catch(err => {
+            console.log(err);
+        });
+    }
+controlador.eliminarEmergenciasVehiculos =
+    async (req, res) => {
+        console.log(req.body);
+        await emergenciasVehiculos.findOneAndDelete({ _id: req.body.id });
+        res.json({ mensaje: "Emergencia eliminada exitosamente", status: 'eliminado', estado: "success" });
     }
 
 

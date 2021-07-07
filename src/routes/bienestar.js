@@ -8,7 +8,7 @@ const controlador = require('../controllers/bienestar.controller.js');
 router.use(verificarToken);
 
 router.route('/encuestas/')
-    .get(controlador.obtenerEncuestas)
+    .post(controlador.obtenerEncuestas)
 router.route('/mis-encuestas/')
     .post(controlador.obtenerMisEncuestas)
 router.route('/encuestas/:id')
@@ -26,7 +26,7 @@ router.route('/encuestas/ver-resultado/:id')
 
 
 router.route('/soporte/')
-    .get(controlador.obtenerConsultas)
+    .post(controlador.obtenerConsultas)
 router.route('/soporte/:rut')
     .get(controlador.obtenerMisConsultas)
 router.route('/soporte/consultas/:id')

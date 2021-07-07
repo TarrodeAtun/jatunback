@@ -9,19 +9,63 @@ const usuario = require('../models/usuario');
 
 const bcrypt = require("bcryptjs");
 const jwt = require('jsonwebtoken');
+const tamañoPag = 2;
 
 //funciones Encuestas
 
 controlador.obtenerEncuestas =
     async (req, res) => {
-        const registros = await encuesta.find(); //consultamos todos los registros de la tabla usuarios y lo almacenamos
-        res.json({ ok: true, data: registros });
+        var page = 1;
+        var match = {};
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        const skip = (page - 1) * tamañoPag;
+        await encuesta.aggregate([
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag }
+        ]).then(resp => {
+            encuesta.aggregate([
+                { $match: match },
+                { $count: "registros" }
+            ]).then(re => {
+                let registros = re[0].registros;
+                paginas = Math.ceil(registros / tamañoPag);
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
+            console.log(resp);
+        });
+        // const registros = await encuesta.find(); //consultamos todos los registros de la tabla usuarios y lo almacenamos
+        // res.json({ ok: true, data: registros });
     }
 
 controlador.obtenerMisEncuestas =
     async (req, res) => {
-        const registros = await encuesta.find({ "trabajadores": { "$elemMatch": { "rut": parseInt(req.body.rut), "estado": 0 } } }); //consultamos todos los registros de la tabla usuarios y lo almacenamos
-        res.json({ ok: true, data: registros });
+        
+        var page = 1;
+        var match = {};
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        if (req.body.rut) {
+            match["trabajadores"] = { "$elemMatch": { "rut": parseInt(req.body.rut), "estado": 0 } };
+        }
+        
+        const skip = (page - 1) * tamañoPag;
+        await encuesta.aggregate([
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag }
+        ]).then(resp => {
+            encuesta.aggregate([
+                { $match: match },
+                { $count: "registros" }
+            ]).then(re => {
+                let registros = re[0].registros;
+                paginas = Math.ceil(registros / tamañoPag);
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
+            console.log(resp);
+        });
     }
 
 controlador.crearEncuesta =
@@ -137,6 +181,12 @@ controlador.verEncuesta =
 
 controlador.obtenerConsultas =
     async (req, res) => {
+        var page = 1;
+        var match = {};
+        if (req.body.pagina) {
+            page = req.body.pagina;
+        }
+        const skip = (page - 1) * tamañoPag;
         await consulta.aggregate([
             {
                 $lookup: {
@@ -160,10 +210,20 @@ controlador.obtenerConsultas =
                     as: 'datosUltimaRespuesta'
                 }
             },
+            { $skip: skip },   // Siempre aplica "salto" antes de "límite
+            { $limit: tamañoPag },
             { $sort: { "fechaRespuesta": -1 } }
         ]).then(resp => {
+            consulta.aggregate([
+                { $match: match },
+                { $count: "registros" }
+            ]).then(re => {
+                let registros = re[0].registros;
+                paginas = Math.ceil(registros / tamañoPag);
+                res.json({ ok: true, data: resp, paginas: paginas });
+            });
             console.log(resp);
-            res.json({ ok: true, data: resp });
+
         });
     }
 controlador.obtenerMisConsultas =
