@@ -24,7 +24,7 @@ controlador.obtenerOrdenes =
         if (req.body.fecha) {
             let fecha = new Date(req.body.fecha);
             console.log(fecha);
-            match["fecha"] = fecha;
+            match["retiro"] = fecha;
         }
         if (req.body.centro) {
             match["centro"] = parseInt(req.body.centro)
@@ -58,10 +58,15 @@ controlador.obtenerOrdenes =
                 { $match: match },
                 { $count: "registros" }
             ]).then(re => {
-                let registros = re[0].registros;
-                paginas = Math.ceil(registros / tamañoPag)
-                console.log(paginas);
-                res.json({ ok: true, data: resp, paginas: paginas });
+                console.log(re);
+                if(re.length > 0){
+                    let registros = re[0].registros;
+                    paginas = Math.ceil(registros / tamañoPag)
+                    console.log(paginas);
+                    res.json({ ok: true, data: resp, paginas: paginas });
+                }else{
+                    res.json({ ok: true, data: resp, paginas: 1 });
+                }
             });
         });
     }
@@ -251,6 +256,13 @@ controlador.modificarRetiro =
             })
         }).catch(err => {
             res.json({ estado: "error", err: err });
+        });
+    }
+
+    controlador.anularRetiro =
+    async (req, res) => {
+        await retiros.findOne({ _id: req.params.id }).then(resp => {
+            res.json({ ok: true, data: resp });
         });
     }
 

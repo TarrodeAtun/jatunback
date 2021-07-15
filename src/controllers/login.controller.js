@@ -34,13 +34,6 @@ controlador.login =
                     }
                 })
             }
-            var perfilSesion = "";
-            if(usuario.perfil === 1){
-                perfilSesion = null
-            }else{
-                perfilSesion = usuario.perfil;
-            }
-            
             delete usuario.password;
             let token = jwt.sign({
                 usuariobd: usuario
@@ -48,8 +41,7 @@ controlador.login =
             return res.json({
                 ok: true,
                 usuariobd: usuario,
-                token,
-                perfilSesion
+                token
             })
         })
     }

@@ -41,16 +41,16 @@ controlador.obtenerEncuestas =
 
 controlador.obtenerMisEncuestas =
     async (req, res) => {
-        
+
         var page = 1;
         var match = {};
         if (req.body.pagina) {
             page = req.body.pagina;
         }
         if (req.body.rut) {
-            match["trabajadores"] = { "$elemMatch": { "rut": parseInt(req.body.rut), "estado": 0 } };
+            match["trabajadores"] = { "$elemMatch": { "rut": parseInt(req.body.rut) } };
         }
-        
+
         const skip = (page - 1) * tamañoPag;
         await encuesta.aggregate([
             { $skip: skip },   // Siempre aplica "salto" antes de "límite
@@ -60,9 +60,13 @@ controlador.obtenerMisEncuestas =
                 { $match: match },
                 { $count: "registros" }
             ]).then(re => {
-                let registros = re[0].registros;
-                paginas = Math.ceil(registros / tamañoPag);
-                res.json({ ok: true, data: resp, paginas: paginas });
+                if (re.length > 0) {
+                    let registros = re[0].registros;
+                    paginas = Math.ceil(registros / tamañoPag);
+                    res.json({ ok: true, data: resp, paginas: paginas });
+                } else {
+                    res.json({ ok: true, data: resp, paginas: 1 });
+                }
             });
             console.log(resp);
         });

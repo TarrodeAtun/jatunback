@@ -15,8 +15,6 @@ const usuario = new Schema(
         bancarios: { type: Object, required: true },
         password: { type: String, required: true },
         perfil: { type: Number, required: true },
-        cargo: { type: Number, required: true },
-        perfilSec: { type: Number, required: true },
         activo: { type: Number},
         recuperacion: { type: String},
         centroCosto: { type: Number},

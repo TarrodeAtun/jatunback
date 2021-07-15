@@ -34,7 +34,7 @@ controlador.todosUsuarios =
 
 controlador.ingresarUsuario =
     async (req, res) => {
-        var { rut, nombre, apellido, fechaNac, email, telefono, hijos, password, perfil, perfilSec, cargo, centroCosto } = req.body; //copiamos los datos recibidos en constantes
+        var { rut, nombre, apellido, fechaNac, email, telefono, hijos, password, perfil, centroCosto } = req.body; //copiamos los datos recibidos en constantes
         var emergencias = JSON.parse(req.body.emergencias);
         var bancarios = JSON.parse(req.body.bancarios);
         console.log(req.body);
@@ -66,7 +66,7 @@ controlador.ingresarUsuario =
         }
         const passencripted = bcrypt.hashSync(password, 10);
         password = passencripted;
-        const nuevoUsuario = new usuario({ rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, perfilSec, cargo, bancarios, activo: 1, centroCosto }); // creamos un objeto usuario con los datos recibidos
+        const nuevoUsuario = new usuario({ rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, password, emergencias, perfil, bancarios, activo: 1, centroCosto }); // creamos un objeto usuario con los datos recibidos
         await nuevoUsuario.save().then(async prom => {
             if (arrayArchivos.length > 0) {
                 console.log("hay imagen");
@@ -110,7 +110,10 @@ controlador.obtenerUsuario =
 controlador.actualizaUsuario =
     async (req, res) => {
         console.log(req.body.fechaNac);
-        var { id, rut, nombre, apellido, fechaNac, email, telefono, hijos, perfil, perfilSec, cargo, centroCosto } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
+        var { id, rut, nombre, apellido, fechaNac, email, telefono, hijos, perfil, centroCosto } = req.body; //copiamos los datos de respuesta de la peticion (datos nuevos)
+        perfil = parseInt(perfil);
+        perfilSec = parseInt(perfilSec);
+        cargo = parseInt(cargo);
         var emergencias = JSON.parse(req.body.emergencias);
         var bancarios = JSON.parse(req.body.bancarios);
         console.log(req.body);
@@ -142,7 +145,7 @@ controlador.actualizaUsuario =
         }
         var direcciones = [];
         usuario.find()
-        const nuevoUsuario = { rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, perfilSec, cargo, bancarios, centroCosto }; //creamos un array usuario con los datos nuevos
+        const nuevoUsuario = { rut, dv, nombre, apellido, fechaNac, email, telefono, hijos, emergencias, perfil, bancarios, centroCosto }; //creamos un array usuario con los datos nuevos
         await usuario.findOneAndUpdate({ _id: id }, nuevoUsuario).then(async prom => { //indicamos a mongoose que en la tabla usuario busque el registro con el id y lo actualice con el nuevo objeto.
             if (arrayArchivos.length > 0) {
                 console.log("hay imagen");
