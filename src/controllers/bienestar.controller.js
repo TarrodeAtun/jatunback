@@ -180,7 +180,14 @@ controlador.verEncuesta =
         }
         res.json({ ok: true, data: resultado });
     }
+controlador.respuestasEncuestas =
+    async (req, res) => {
+        console.log(req.body);
+        const registros = await respuestaEncuesta.findOne({ idEncuesta: req.body.id, rut: parseInt(req.body.rut) }); //consultamos todos los registros de la tabla usuarios y lo almacenamos
+        console.log(registros);
+        res.json({ ok: true, data: registros });
 
+    }
 //Funciones Consultas
 
 controlador.obtenerConsultas =

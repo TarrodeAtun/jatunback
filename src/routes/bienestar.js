@@ -23,6 +23,8 @@ router.route('/encuestas/responder/')
     .post(controlador.responderEncuesta)
 router.route('/encuestas/ver-resultado/:id')
     .get(controlador.verEncuesta)
+router.route('/encuestas/respuestas/')
+    .post(controlador.respuestasEncuestas)
 
 
 router.route('/soporte/')

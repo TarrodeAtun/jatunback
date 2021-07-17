@@ -298,7 +298,7 @@ controlador.todosTrabajadoresPost =
 controlador.todosJefes =
     async (req, res) => {
         await usuario.aggregate([
-            { $match: { cargo: "1" } },
+            { $match: { perfil: 2 } },
             { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
         ]).then(resp => {
             console.log(resp);
@@ -308,7 +308,7 @@ controlador.todosJefes =
 controlador.todosConductores =
     async (req, res) => {
         await usuario.aggregate([
-            { $match: { cargo: 3 } },
+            { $match: { perfil: 7 } },
             { $project: { "nombre": 1, "apellido": 1, "rut": 1, "dv": 1 } }
         ]).then(resp => {
             console.log(resp);
